@@ -1,0 +1,96 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=Sora:wght@400..800&display=swap");
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #273442;
+  --card: #ffffff;
+  --card-foreground: #273442;
+  --popover: #ffffff;
+  --popover-foreground: #273442;
+  --primary: #00abed;
+  --primary-foreground: #f9fcff;
+  --secondary: #ebf7fd;
+  --secondary-foreground: #273442;
+  --muted: #ebf7fd;
+  --muted-foreground: #6d7c8c;
+  --accent: #e5f7ff;
+  --accent-foreground: #273442;
+
+  --destructive: oklch(0.577 0.245 27.325);
+
+  --border: #d8e7f0;
+  --input: #d2e4f0;
+  --ring: #00abed;
+  --ice: #e5f7ff;
+  --ice-deep: #ceeefe;
+
+  --radius: 0.625rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #273442;
+  --sidebar-primary: #00abed;
+  --sidebar-primary-foreground: #f9fcff;
+  --sidebar-accent: #e5f7ff;
+  --sidebar-accent-foreground: #273442;
+  --sidebar-border: #d8e7f0;
+  --sidebar-ring: #00abed;
+}
+
+@theme inline {
+  --font-sans: "Instrument Sans", sans-serif;
+  --font-heading: "Sora", sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-ice-deep: var(--ice-deep);
+  --color-ice: var(--ice);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+
+  h1,
+  h2 {
+    @apply font-heading;
+  }
+}
