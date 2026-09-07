@@ -1,9 +1,11 @@
+import Auth from "./pages/auth/page";
+
 const Home = () => {
-  return ( 
+  return (
     <div>
-      Olá mundo
+      <Auth />
     </div>
-   );
-}
- 
+  );
+};
+
 export default Home;
