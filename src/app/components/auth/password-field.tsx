@@ -7,17 +7,27 @@ import { Label } from "@/components/ui/label";
 
 type PasswordFieldProps = {
   id: string;
+  value: string;
+  onChange: (value: string) => void;
   label?: string;
   placeholder: string;
   autoComplete: string;
+  minLength?: number;
+  maxLength?: number;
+  invalid?: boolean;
   required?: boolean;
 };
 
 const PasswordField = ({
   id,
+  value,
+  onChange,
   label,
   placeholder,
   autoComplete,
+  minLength,
+  maxLength,
+  invalid = false,
   required = false,
 }: PasswordFieldProps) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -30,8 +40,13 @@ const PasswordField = ({
           id={id}
           name={id}
           type={isVisible ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           autoComplete={autoComplete}
+          minLength={minLength}
+          maxLength={maxLength}
+          aria-invalid={invalid}
           required={required}
           className="h-[clamp(2.5rem,6vh,3rem)] pr-11"
         />

@@ -1,10 +1,11 @@
-import type { AuthMode } from "@/types/auth";
+import type { AuthMode } from "@/types/auth/auth-mode";
 
 type LoginHeaderProps = {
   mode: AuthMode;
+  isAuthenticated: boolean;
 };
 
-const LoginHeader = ({ mode }: LoginHeaderProps) => {
+const LoginHeader = ({ mode, isAuthenticated }: LoginHeaderProps) => {
   const isLogin = mode === "login";
 
   return (
@@ -15,10 +16,16 @@ const LoginHeader = ({ mode }: LoginHeaderProps) => {
         className="mb-[clamp(0.75rem,4vh,2.25rem)] size-[clamp(2.5rem,6vh,3rem)] rounded-xl object-cover"
       />
       <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
-        {isLogin ? "Bem-vindo de volta" : "Crie sua conta"}
+        {isAuthenticated
+          ? "Você está conectado"
+          : isLogin
+            ? "Bem-vindo de volta"
+            : "Crie sua conta"}
       </h1>
       <p className="mt-[clamp(0.25rem,1vh,0.5rem)] text-base text-muted-foreground">
-        {isLogin
+        {isAuthenticated
+          ? "Sua sessão está ativa."
+          : isLogin
           ? "Entre na sua conta para continuar."
           : "Comece agora a conectar sua equipe."}
       </p>
