@@ -1,11 +1,5 @@
-import Auth from "./pages/auth/page";
+import AuthPage from "@/app/pages/auth/page";
 
-const Home = () => {
-  return (
-    <div>
-      <Auth />
-    </div>
-  );
-};
+const App = () => <AuthPage />;
 
-export default Home;
+export default App;
