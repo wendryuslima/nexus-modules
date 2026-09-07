@@ -4,7 +4,7 @@ import { useSignOut } from "@/hooks/auth/use-sign-out";
 import type { AuthUser } from "@/types/auth/auth-user";
 
 type AuthenticatedSessionProps = {
-  user: AuthUser;
+  user: AuthUser | null;
   onSignedOut: () => void;
 };
 
@@ -23,8 +23,10 @@ const AuthenticatedSession = ({
       {signOut.error && <RequestErrorAlert message={signOut.error.message} />}
 
       <div className="space-y-1 border-l-2 border-primary pl-4">
-        <p className="text-sm text-muted-foreground">Sessão iniciada como</p>
-        <p className="font-medium break-all">{user.email}</p>
+        <p className="text-sm text-muted-foreground">
+          {user ? "Sessão iniciada como" : "Sessão autenticada"}
+        </p>
+        {user && <p className="font-medium break-all">{user.email}</p>}
       </div>
 
       <Button
