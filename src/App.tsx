@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import HomePage from "@/app/pages/home/page";
+import PeoplePage from "@/app/pages/people/page";
 import SignInPage from "@/app/pages/signin/page";
 import SignUpPage from "@/app/pages/signup/page";
 import GuestRoute from "@/app/routes/guest-route";
@@ -16,7 +16,8 @@ const App = () => {
         </Route>
 
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<Navigate to="/people" replace />} />
+          <Route path="/people" element={<PeoplePage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/signin" replace />} />
