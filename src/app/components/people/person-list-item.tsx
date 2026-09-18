@@ -1,40 +1,63 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getNameInitials } from "@/lib/get-name-initials";
 import { getUserDisplayName } from "@/lib/get-user-display-name";
+import { cn } from "@/lib/utils";
 import type { ListedUserDto } from "@/types/users/list-users-dto";
 
 type PersonListItemProps = {
   user: ListedUserDto;
+  isActive?: boolean;
+  onSelect: (user: ListedUserDto) => void;
 };
 
-const createdAtFormatter = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
-
-const PersonListItem = ({ user }: PersonListItemProps) => {
+const PersonListItem = ({ user, isActive = false, onSelect }: PersonListItemProps) => {
   const name = getUserDisplayName(user.email);
 
   return (
-    <li className="flex min-w-0 items-center gap-4 px-4 py-4 sm:px-5">
-      <Avatar className="size-11 border-0">
-        <AvatarFallback className="bg-primary/15 font-heading text-sm font-semibold text-primary">
-          {getNameInitials(name)}
-        </AvatarFallback>
-      </Avatar>
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-foreground">{name}</p>
-        <p className="truncate text-sm text-muted-foreground">{user.email}</p>
-      </div>
-
-      <time
-        dateTime={user.created_at}
-        className="hidden shrink-0 text-xs text-muted-foreground sm:block"
+    <li>
+      <button
+        type="button"
+        onClick={() => onSelect(user)}
+        aria-current={isActive ? "true" : undefined}
+        className={cn(
+          "group flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-foreground hover:bg-secondary",
+        )}
       >
-        Desde {createdAtFormatter.format(new Date(user.created_at))}
-      </time>
+        <div className="relative shrink-0">
+          <Avatar className="size-7">
+            <AvatarFallback
+              className={cn(
+                "text-[0.65rem] font-semibold",
+                isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/15 text-primary",
+              )}
+            >
+              {getNameInitials(name)}
+            </AvatarFallback>
+          </Avatar>
+          <span
+            aria-label="Disponível"
+            className={cn(
+              "absolute right-0 bottom-0 size-2 rounded-full border border-card bg-emerald-500",
+              isActive && "border-primary",
+            )}
+          />
+        </div>
+
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium">{name}</span>
+          <span
+            className={cn(
+              "block truncate text-xs",
+              isActive ? "text-primary-foreground/75" : "text-muted-foreground",
+            )}
+          >
+            {user.email}
+          </span>
+        </span>
+      </button>
     </li>
   );
 };
