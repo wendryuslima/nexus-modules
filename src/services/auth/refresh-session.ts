@@ -1,12 +1,20 @@
 import { apiRequest } from "@/services/http/api-client";
 import type { AuthSession } from "@/types/auth/auth-session";
 
-const refreshSession = async (): Promise<AuthSession> => {
-  await apiRequest<void>("/v1/auth/refresh", {
-    method: "POST",
-  });
+let refreshPromise: Promise<AuthSession> | null = null;
 
-  return { isAuthenticated: true, user: null };
+const refreshSession = (): Promise<AuthSession> => {
+  if (!refreshPromise) {
+    refreshPromise = apiRequest<void>("/v1/auth/refresh", {
+      method: "POST",
+    })
+      .then(() => ({ isAuthenticated: true, user: null }))
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
 };
 
 export { refreshSession };

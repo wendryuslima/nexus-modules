@@ -2,18 +2,16 @@ import {
   CircleAlert,
   CircleDot,
   MessageCircle,
-  Search,
   Star,
   UsersRound,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { AppShell } from "@/app/components/layout/app-shell";
 import { PeopleListSkeleton } from "@/app/components/people/people-list-skeleton";
 import { PersonListItem } from "@/app/components/people/person-list-item";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthSession } from "@/hooks/auth/use-auth-session";
@@ -23,19 +21,7 @@ import { getUserDisplayName } from "@/lib/get-user-display-name";
 const PeoplePage = () => {
   const session = useAuthSession();
   const users = useUsers();
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-
-  const filteredUsers = useMemo(() => {
-    if (!users.data) return [];
-
-    const normalizedTerm = searchTerm.trim().toLocaleLowerCase("pt-BR");
-    if (!normalizedTerm) return users.data;
-
-    return users.data.filter((user) =>
-      user.email.toLocaleLowerCase("pt-BR").includes(normalizedTerm),
-    );
-  }, [searchTerm, users.data]);
 
   const selectedUser = users.data?.find((user) => user.user_id === selectedUserId);
   const selectedUserName = selectedUser ? getUserDisplayName(selectedUser.email) : null;
@@ -53,27 +39,6 @@ const PeoplePage = () => {
               </div>
               <span className="size-2.5 rounded-full bg-emerald-500" title="Conectado" />
             </div>
-
-            <div className="px-3 pt-3">
-              <div className="relative">
-                <Search
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                  type="search"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Encontrar uma conversa..."
-                  aria-label="Buscar pessoas"
-                  className="h-9 bg-secondary/60 pr-3 pl-8 text-sm shadow-none"
-                />
-              </div>
-            </div>
-
-            
-
-           
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
               <div className="mb-2 flex items-center gap-2 px-2 text-sm font-semibold text-foreground">
@@ -101,9 +66,9 @@ const PeoplePage = () => {
                 </Alert>
               )}
 
-              {users.isSuccess && filteredUsers.length > 0 && (
+              {users.isSuccess && users.data.length > 0 && (
                 <ul className="space-y-0.5">
-                  {filteredUsers.map((user) => (
+                  {users.data.map((user) => (
                     <PersonListItem
                       key={user.user_id}
                       user={user}
@@ -114,11 +79,9 @@ const PeoplePage = () => {
                 </ul>
               )}
 
-              {users.isSuccess && filteredUsers.length === 0 && (
+              {users.isSuccess && users.data.length === 0 && (
                 <p className="px-2 py-4 text-sm text-muted-foreground">
-                  {users.data.length === 0
-                    ? "Ainda não há pessoas na sua equipe."
-                    : "Nenhum contato encontrado."}
+                  Ainda não há pessoas na sua equipe.
                 </p>
               )}
             </div>

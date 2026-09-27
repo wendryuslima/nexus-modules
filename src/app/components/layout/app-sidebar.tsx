@@ -31,7 +31,7 @@ type NavigationItem = {
 };
 
 const navigationItems: NavigationItem[] = [
-  { label: "Conversas", icon: MessageCircle },
+  { label: "Conversas", icon: MessageCircle, href: "/chats" },
   { label: "Grupos", icon: UsersRound },
   { label: "Pessoas", icon: UserRound, href: "/people" },
   { label: "Arquivos", icon: FolderClosed },
@@ -68,7 +68,7 @@ const AppSidebar = ({ currentUserEmail }: AppSidebarProps) => {
         <SidebarGroup className="px-2 py-3">
           <SidebarMenu className="gap-2">
             {navigationItems.map(({ label, icon: Icon, href }) => {
-              const isActive = href === location.pathname;
+              const isActive = !!href && (href === location.pathname || location.pathname.startsWith(`${href}/`));
 
               return (
                 <SidebarMenuItem key={label}>

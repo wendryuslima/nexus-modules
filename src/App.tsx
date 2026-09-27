@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
+import ChatsPage from "@/app/pages/chats/page";
 import PeoplePage from "@/app/pages/people/page";
 import SignInPage from "@/app/pages/signin/page";
 import SignUpPage from "@/app/pages/signup/page";
@@ -16,7 +17,9 @@ const App = () => {
         </Route>
 
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Navigate to="/people" replace />} />
+          <Route path="/" element={<Navigate to="/chats" replace />} />
+          <Route path="/chats" element={<ChatsPage />} />
+          <Route path="/chats/:chatId" element={<ChatsPage />} />
           <Route path="/people" element={<PeoplePage />} />
         </Route>
 
