@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { getNameInitials } from "@/lib/get-name-initials";
 import { getUserDisplayName } from "@/lib/get-user-display-name";
 import { cn } from "@/lib/utils";
@@ -7,20 +8,28 @@ import type { ListedUserDto } from "@/types/users/list-users-dto";
 type PersonListItemProps = {
   user: ListedUserDto;
   isActive?: boolean;
+  disabled?: boolean;
   onSelect: (user: ListedUserDto) => void;
 };
 
-const PersonListItem = ({ user, isActive = false, onSelect }: PersonListItemProps) => {
+const PersonListItem = ({
+  user,
+  isActive = false,
+  disabled = false,
+  onSelect,
+}: PersonListItemProps) => {
   const name = getUserDisplayName(user.email);
 
   return (
     <li>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => onSelect(user)}
+        disabled={disabled}
         aria-current={isActive ? "true" : undefined}
         className={cn(
-          "group flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          "h-auto w-full min-w-0 justify-start gap-2 rounded-md px-2 py-1.5 text-left",
           isActive
             ? "bg-primary text-primary-foreground"
             : "text-foreground hover:bg-secondary",
@@ -40,7 +49,7 @@ const PersonListItem = ({ user, isActive = false, onSelect }: PersonListItemProp
           <span
             aria-label="Disponível"
             className={cn(
-              "absolute right-0 bottom-0 size-2 rounded-full border border-card bg-emerald-500",
+              "absolute right-0 bottom-0 size-2 rounded-full border border-card bg-primary",
               isActive && "border-primary",
             )}
           />
@@ -57,7 +66,7 @@ const PersonListItem = ({ user, isActive = false, onSelect }: PersonListItemProp
             {user.email}
           </span>
         </span>
-      </button>
+      </Button>
     </li>
   );
 };

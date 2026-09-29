@@ -6,7 +6,9 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
+import RequestErrorAlert from "@/app/components/auth/request-error-alert";
 import { AppShell } from "@/app/components/layout/app-shell";
 import { PeopleListSkeleton } from "@/app/components/people/people-list-skeleton";
 import { PersonListItem } from "@/app/components/people/person-list-item";
@@ -15,16 +17,29 @@ import { Button } from "@/components/ui/button";
 
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthSession } from "@/hooks/auth/use-auth-session";
+import { useCreateDirectChat } from "@/hooks/chats/use-create-direct-chat";
 import { useUsers } from "@/hooks/users/use-users";
 import { getUserDisplayName } from "@/lib/get-user-display-name";
 
 const PeoplePage = () => {
   const session = useAuthSession();
   const users = useUsers();
+  const createDirectChat = useCreateDirectChat();
+  const navigate = useNavigate();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const selectedUser = users.data?.find((user) => user.user_id === selectedUserId);
   const selectedUserName = selectedUser ? getUserDisplayName(selectedUser.email) : null;
+
+  const openDirectChat = (relatedUserId: string) => {
+    setSelectedUserId(relatedUserId);
+    createDirectChat.mutate(
+      { relatedUserId },
+      {
+        onSuccess: ({ data }) => navigate(`/chats/${encodeURIComponent(data.id)}`),
+      },
+    );
+  };
 
   return (
     <AppShell currentUserEmail={session.data?.user?.email ?? null}>
@@ -37,7 +52,7 @@ const PeoplePage = () => {
                 <h1 className="truncate font-heading text-lg font-semibold">Nexus</h1>
                 <p className="truncate text-xs text-muted-foreground">Sua equipe</p>
               </div>
-              <span className="size-2.5 rounded-full bg-emerald-500" title="Conectado" />
+              <span className="size-2.5 rounded-full bg-primary" title="Conectado" />
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
@@ -73,7 +88,8 @@ const PeoplePage = () => {
                       key={user.user_id}
                       user={user}
                       isActive={user.user_id === selectedUserId}
-                      onSelect={(selected) => setSelectedUserId(selected.user_id)}
+                      disabled={createDirectChat.isPending}
+                      onSelect={(selected) => openDirectChat(selected.user_id)}
                     />
                   ))}
                 </ul>
@@ -93,7 +109,7 @@ const PeoplePage = () => {
                 <div className="min-w-0">
                   <h2 className="truncate font-heading text-lg font-semibold">{selectedUserName}</h2>
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <CircleDot aria-hidden="true" className="size-3 text-emerald-500" />
+                    <CircleDot aria-hidden="true" className="size-3 text-primary" />
                     Disponível para conversar
                   </p>
                 </div>
@@ -112,9 +128,17 @@ const PeoplePage = () => {
                     <MessageCircle aria-hidden="true" className="size-6" />
                   </span>
                   <h3 className="font-heading text-xl font-semibold">Conversa com {selectedUserName}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    As mensagens desta conversa aparecerão aqui.
-                  </p>
+                  {createDirectChat.error ? (
+                    <div className="mt-4 text-left">
+                      <RequestErrorAlert message={createDirectChat.error.message} />
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {createDirectChat.isPending
+                        ? "Abrindo conversa..."
+                        : "Selecione novamente para tentar abrir a conversa."}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="max-w-sm">

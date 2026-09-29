@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import RequestErrorAlert from "@/app/components/auth/request-error-alert";
 import { ChatListItem } from "@/app/components/chats/chat-list-item";
 import { ChatPlaceholder } from "@/app/components/chats/chat-placeholder";
+import { ChatTimeline } from "@/app/components/chats/chat-timeline";
 import { ChatsListSkeleton } from "@/app/components/chats/chats-list-skeleton";
 import { AppShell } from "@/app/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,14 @@ const ChatsPage = () => {
                 </Button>
               </div>
             )}
-            <ChatPlaceholder chatId={chatId} name={selectedUser ? getUserDisplayName(selectedUser.email) : undefined} />
+            {chatId ? (
+              <ChatTimeline
+                chatId={chatId}
+                participantName={selectedUser ? getUserDisplayName(selectedUser.email) : undefined}
+              />
+            ) : (
+              <ChatPlaceholder />
+            )}
           </div>
         </div>
       </SidebarInset>
