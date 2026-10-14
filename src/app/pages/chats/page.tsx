@@ -1,5 +1,4 @@
 import { ArrowLeft, MessageSquarePlus } from "lucide-react";
-import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import RequestErrorAlert from "@/app/components/auth/request-error-alert";
@@ -9,26 +8,32 @@ import { ChatTimeline } from "@/app/components/chats/chat-timeline";
 import { ChatsListSkeleton } from "@/app/components/chats/chats-list-skeleton";
 import { AppShell } from "@/app/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthSession } from "@/hooks/auth/use-auth-session";
 import { useChats } from "@/hooks/chats/use-chats";
-import { useUsers } from "@/hooks/users/use-users";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { getUserDisplayName } from "@/lib/get-user-display-name";
 import { cn } from "@/lib/utils";
 
 const ChatsPage = () => {
   const session = useAuthSession();
   const chats = useChats();
-  const users = useUsers();
   const { chatId } = useParams<{ chatId: string }>();
 
-  const usersById = useMemo(
-    () => new Map(users.data?.map((user) => [user.user_id, user])),
-    [users.data],
-  );
   const loadedChats = chats.data?.pages.flatMap((page) => page.data) ?? [];
+  const { scrollAreaRef, sentinelRef } = useInfiniteScroll({
+    hasNextPage: Boolean(chats.hasNextPage),
+    isFetchingNextPage: chats.isFetchingNextPage,
+    isFetchNextPageError: chats.isFetchNextPageError,
+    itemCount: loadedChats.length,
+    fetchNextPage: chats.fetchNextPage,
+  });
   const selectedChat = loadedChats.find((chat) => chat.id === chatId);
-  const selectedUser = selectedChat ? usersById.get(selectedChat.relatedUser) : undefined;
+  const selectedUserEmail = selectedChat?.relatedUserEmail;
+  const currentUserName = session.data?.user?.email
+    ? getUserDisplayName(session.data.user.email)
+    : undefined;
 
   return (
     <AppShell currentUserEmail={session.data?.user?.email ?? null}>
@@ -46,19 +51,13 @@ const ChatsPage = () => {
               </Button>
             </header>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4" aria-busy={chats.isFetching}>
+            <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1" aria-busy={chats.isFetching}>
+              <div className="px-2 pb-4">
               <h2 className="px-3 pb-2 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">Recentes</h2>
               {chats.isPending && <ChatsListSkeleton />}
-              {users.error && (
-                <div className="mx-2 mb-3 space-y-2">
-                  <RequestErrorAlert message={users.error.message} />
-                  <Button variant="outline" size="sm" onClick={() => users.refetch()} disabled={users.isFetching}>Tentar carregar participantes</Button>
-                </div>
-              )}
               <ul className="space-y-0.5">
-                {loadedChats.map((chat, index) => {
-                  const user = usersById.get(chat.relatedUser);
-                  return <ChatListItem key={`${chat.id}-${index}`} chat={chat} name={user ? getUserDisplayName(user.email) : "Participante"} email={user?.email} isActive={chat.id === chatId} />;
+                {loadedChats.map((chat) => {
+                  return <ChatListItem key={chat.id} chat={chat} name={chat.relatedUserEmail ? getUserDisplayName(chat.relatedUserEmail) : "Participante"} isActive={chat.id === chatId} />;
                 })}
               </ul>
               {chats.error && (
@@ -72,12 +71,10 @@ const ChatsPage = () => {
                   Você ainda não tem conversas.
                 </p>
               )}
-              {chats.hasNextPage && (
-                <Button variant="ghost" className="mt-3 w-full text-primary" onClick={() => chats.fetchNextPage()} disabled={chats.isFetching}>
-                  {chats.isFetchingNextPage ? "Carregando..." : "Carregar mais conversas"}
-                </Button>
-              )}
-            </div>
+              {chats.isFetchingNextPage && <p role="status" className="px-3 py-3 text-xs text-muted-foreground">Carregando conversas...</p>}
+              <div ref={sentinelRef} aria-hidden="true" className="h-px" />
+              </div>
+            </ScrollArea>
           </aside>
 
           <div className={cn("min-w-0 flex-1 flex-col md:flex", chatId ? "flex" : "hidden")}>
@@ -91,7 +88,8 @@ const ChatsPage = () => {
             {chatId ? (
               <ChatTimeline
                 chatId={chatId}
-                participantName={selectedUser ? getUserDisplayName(selectedUser.email) : undefined}
+                participantName={selectedUserEmail ? getUserDisplayName(selectedUserEmail) : undefined}
+                currentUserName={currentUserName}
               />
             ) : (
               <ChatPlaceholder />

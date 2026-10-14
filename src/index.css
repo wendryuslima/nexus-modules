@@ -28,6 +28,7 @@
   --ring: #00abed;
   --ice: #e5f7ff;
   --ice-deep: #ceeefe;
+  --success: #22c983;
 
   --radius: 0.625rem;
   --sidebar: #ffffff;
@@ -54,6 +55,7 @@
   --color-ring: var(--ring);
   --color-ice-deep: var(--ice-deep);
   --color-ice: var(--ice);
+  --color-success: var(--success);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);

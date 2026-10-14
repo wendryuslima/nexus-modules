@@ -1,6 +1,7 @@
 type ChatDto = {
   id: string;
   relatedUser: string;
+  relatedUserEmail: string;
   createdAt: string;
   updatedAt: string;
   summarySortAt: string;

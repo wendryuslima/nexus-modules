@@ -14,11 +14,13 @@ import { PeopleListSkeleton } from "@/app/components/people/people-list-skeleton
 import { PersonListItem } from "@/app/components/people/person-list-item";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthSession } from "@/hooks/auth/use-auth-session";
 import { useCreateDirectChat } from "@/hooks/chats/use-create-direct-chat";
 import { useUsers } from "@/hooks/users/use-users";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { getUserDisplayName } from "@/lib/get-user-display-name";
 
 const PeoplePage = () => {
@@ -27,8 +29,16 @@ const PeoplePage = () => {
   const createDirectChat = useCreateDirectChat();
   const navigate = useNavigate();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const loadedUsers = users.data?.pages.flatMap((page) => page.data) ?? [];
+  const { scrollAreaRef, sentinelRef } = useInfiniteScroll({
+    hasNextPage: Boolean(users.hasNextPage),
+    isFetchingNextPage: users.isFetchingNextPage,
+    isFetchNextPageError: users.isFetchNextPageError,
+    itemCount: loadedUsers.length,
+    fetchNextPage: users.fetchNextPage,
+  });
 
-  const selectedUser = users.data?.find((user) => user.user_id === selectedUserId);
+  const selectedUser = loadedUsers.find((user) => user.user_id === selectedUserId);
   const selectedUserName = selectedUser ? getUserDisplayName(selectedUser.email) : null;
 
   const openDirectChat = (relatedUserId: string) => {
@@ -55,7 +65,8 @@ const PeoplePage = () => {
               <span className="size-2.5 rounded-full bg-primary" title="Conectado" />
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+            <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1" aria-busy={users.isFetching}>
+              <div className="px-3 py-3">
               <div className="mb-2 flex items-center gap-2 px-2 text-sm font-semibold text-foreground">
                 <Star aria-hidden="true" className="size-4 text-muted-foreground" />
                 Mensagens diretas
@@ -63,7 +74,7 @@ const PeoplePage = () => {
 
               {users.isPending && <PeopleListSkeleton />}
 
-              {users.error && (
+              {users.error && !users.data && (
                 <Alert variant="destructive" className="p-3">
                   <CircleAlert aria-hidden="true" className="size-4" />
                   <AlertTitle className="text-sm">Não foi possível carregar</AlertTitle>
@@ -81,9 +92,9 @@ const PeoplePage = () => {
                 </Alert>
               )}
 
-              {users.isSuccess && users.data.length > 0 && (
+              {loadedUsers.length > 0 && (
                 <ul className="space-y-0.5">
-                  {users.data.map((user) => (
+                  {loadedUsers.map((user) => (
                     <PersonListItem
                       key={user.user_id}
                       user={user}
@@ -95,12 +106,23 @@ const PeoplePage = () => {
                 </ul>
               )}
 
-              {users.isSuccess && users.data.length === 0 && (
+              {users.isSuccess && loadedUsers.length === 0 && (
                 <p className="px-2 py-4 text-sm text-muted-foreground">
                   Ainda não há pessoas na sua equipe.
                 </p>
               )}
-            </div>
+              {users.isFetchNextPageError && users.error && (
+                <div className="mt-3 space-y-2">
+                  <RequestErrorAlert message={users.error.message} />
+                  <Button variant="outline" size="sm" onClick={() => users.fetchNextPage()} disabled={users.isFetching}>
+                    Tentar novamente
+                  </Button>
+                </div>
+              )}
+              {users.isFetchingNextPage && <p role="status" className="px-2 py-3 text-xs text-muted-foreground">Carregando pessoas...</p>}
+              <div ref={sentinelRef} aria-hidden="true" className="h-px" />
+              </div>
+            </ScrollArea>
           </aside>
 
           <section className="flex min-w-0 flex-1 flex-col bg-background">

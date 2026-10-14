@@ -8,10 +8,23 @@ type TimelineTextContentDto = {
   value: string;
 };
 
+type TimelineReplyDto = {
+  authorName: string;
+  content: string;
+};
+
+type TimelineReactionDto = {
+  emoji: string;
+  count: number;
+  reactedByMe?: boolean;
+};
+
 type TimelineMessageDto = {
   senderId: string;
   isMine: boolean;
   content: TimelineTextContentDto;
+  replyTo?: TimelineReplyDto;
+  reactions?: TimelineReactionDto[];
 };
 
 type TimelineItemDto = {
@@ -40,6 +53,10 @@ type ListTimelineResponseDto = {
   };
 };
 
+type SendTimelineMessagePayload = {
+  content: string;
+};
+
 export type {
   ListTimelineParams,
   ListTimelineResponseDto,
@@ -47,5 +64,8 @@ export type {
   TimelineItemDto,
   TimelineMessageDto,
   TimelinePaginationDto,
+  TimelineReactionDto,
+  TimelineReplyDto,
   TimelineTextContentDto,
+  SendTimelineMessagePayload,
 };

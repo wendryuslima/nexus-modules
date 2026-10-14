@@ -1,25 +1,29 @@
 import { MessageCircle, RefreshCw } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import RequestErrorAlert from "@/app/components/auth/request-error-alert";
+import { MessageComposer } from "@/app/components/chats/message-composer";
 import { TimelineDayDivider } from "@/app/components/chats/timeline-day-divider";
+import { TimelineHeader } from "@/app/components/chats/timeline-header";
 import { TimelineMessage } from "@/app/components/chats/timeline-message";
 import { TimelineSkeleton } from "@/app/components/chats/timeline-skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useTimeline } from "@/hooks/chats/use-timeline";
 import { useTimelineScroll } from "@/hooks/chats/use-timeline-scroll";
 import { calendarDayKey, formatTimelineDate } from "@/lib/format-timeline-date";
-import { getNameInitials } from "@/lib/get-name-initials";
 import { mergeTimelinePages } from "@/lib/merge-timeline-pages";
 
 type ChatTimelineProps = {
   chatId: string;
   participantName?: string;
+  currentUserName?: string;
 };
 
-const ChatTimeline = ({ chatId, participantName }: ChatTimelineProps) => {
+const ChatTimeline = ({
+  chatId,
+  participantName = "Participante",
+  currentUserName,
+}: ChatTimelineProps) => {
   const timeline = useTimeline(chatId);
   const { scrollContainerRef, loadOlderMessages } = useTimelineScroll({
     chatId,
@@ -30,22 +34,28 @@ const ChatTimeline = ({ chatId, participantName }: ChatTimelineProps) => {
     () => (timeline.data ? mergeTimelinePages(timeline.data.pages) : []),
     [timeline.data],
   );
+  const latestItem = items.at(-1);
+
+  useEffect(() => {
+    if (!latestItem?.message.isMine) return;
+
+    requestAnimationFrame(() => {
+      scrollContainerRef.current?.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+  }, [latestItem?.id, latestItem?.message.isMine, scrollContainerRef]);
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-      <header className="flex h-[4.5rem] shrink-0 items-center gap-3 border-b px-5 sm:px-6">
-        <Avatar className="size-9">
-          <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
-            {participantName ? getNameInitials(participantName) : "?"}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0">
-          <h2 className="truncate text-base font-semibold">{participantName ?? "Conversa"}</h2>
-          <p className="text-xs text-muted-foreground">Histórico da conversa</p>
-        </div>
-      </header>
+      <TimelineHeader participantName={participantName} />
 
-      <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto" aria-live="polite">
+      <div
+        ref={scrollContainerRef}
+        className="min-h-0 flex-1 overflow-y-auto"
+        aria-live="polite"
+      >
         {timeline.isPending && <TimelineSkeleton />}
 
         {timeline.error && !timeline.data && (
@@ -59,7 +69,7 @@ const ChatTimeline = ({ chatId, participantName }: ChatTimelineProps) => {
         )}
 
         {timeline.data && (
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-5 py-6 sm:px-8">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-7 px-4 py-6 sm:px-8 sm:py-8">
             {timeline.hasNextPage && !timeline.isFetchNextPageError && (
               <Button
                 variant="ghost"
@@ -87,7 +97,7 @@ const ChatTimeline = ({ chatId, participantName }: ChatTimelineProps) => {
                 </span>
                 <h3 className="font-heading text-lg font-semibold">Nenhuma mensagem ainda</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  O histórico desta conversa está vazio.
+                  Comece a conversa enviando uma mensagem abaixo.
                 </p>
               </div>
             )}
@@ -104,7 +114,11 @@ const ChatTimeline = ({ chatId, participantName }: ChatTimelineProps) => {
                   {currentDay !== previousDay && (
                     <TimelineDayDivider label={formatTimelineDate(item.createdAt)} />
                   )}
-                  <TimelineMessage item={item} participantName={participantName} />
+                  <TimelineMessage
+                    item={item}
+                    participantName={participantName}
+                    currentUserName={currentUserName}
+                  />
                 </div>
               );
             })}
@@ -112,14 +126,7 @@ const ChatTimeline = ({ chatId, participantName }: ChatTimelineProps) => {
         )}
       </div>
 
-      <footer className="shrink-0 border-t p-3 sm:p-4">
-        <Input
-          aria-label="Mensagem"
-          placeholder="Envio de mensagens ainda não disponível"
-          disabled
-          className="h-11"
-        />
-      </footer>
+      <MessageComposer chatId={chatId} participantName={participantName} />
     </section>
   );
 };

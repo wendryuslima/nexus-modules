@@ -55,6 +55,20 @@ test("página seguinte preserva exatamente o cursor RFC 3339 e a ordem recebida"
   expect(await listChats({ ...firstPage, page: 2, cursor })).toEqual(response);
 });
 
+test("usuários usam página limitada e preservam o cursor de criação", async () => {
+  const cursor = { id: "user/+?", createdAt: "2026-10-04T03:22:12.916Z" };
+  globalThis.fetch = (async (input) => {
+    const url = new URL(String(input));
+    expect(url.pathname).toBe("/v1/users");
+    expect([...url.searchParams.entries()]).toEqual([
+      ["page", "2"], ["pageSize", "30"],
+      ["cursorId", cursor.id], ["cursorCreatedAt", cursor.createdAt],
+    ]);
+    return Response.json({ data: [], pagination: { ...emptyPage.pagination, page: 2 } });
+  }) as typeof fetch;
+  await listUsers({ page: 2, pageSize: 30, cursor });
+});
+
 test("erros de negócio preservam a mensagem retornada pelo servidor", async () => {
   globalThis.fetch = (async () => Response.json({
     error: { code: "invalid_pagination", message: "Cursor expirado na consulta." },

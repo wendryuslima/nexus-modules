@@ -6,6 +6,17 @@ type ListedUserDto = {
 
 type ListUsersResponseDto = {
   data: ListedUserDto[];
+  pagination: {
+    hasNext: boolean;
+    nextCursor: UserCursorDto | null;
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
 };
 
-export type { ListedUserDto, ListUsersResponseDto };
+type UserCursorDto = { id: string; createdAt: string };
+type ListUsersParams = { page: number; pageSize: number; cursor?: UserCursorDto };
+
+export type { ListedUserDto, ListUsersParams, ListUsersResponseDto };

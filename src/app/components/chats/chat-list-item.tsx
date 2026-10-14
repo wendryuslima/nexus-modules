@@ -10,11 +10,10 @@ import type { ChatDto } from "@/types/chats/list-chats-dto";
 type ChatListItemProps = {
   chat: ChatDto;
   name: string;
-  email?: string;
   isActive: boolean;
 };
 
-const ChatListItem = ({ chat, name, email, isActive }: ChatListItemProps) => (
+const ChatListItem = ({ chat, name, isActive }: ChatListItemProps) => (
   <li>
     <Button
       render={<Link to={`/chats/${chat.id}`} />}
@@ -28,15 +27,10 @@ const ChatListItem = ({ chat, name, email, isActive }: ChatListItemProps) => (
     >
       <Avatar className="size-10">
         <AvatarFallback className="bg-primary/15 text-xs font-semibold text-foreground">
-          {email ? getNameInitials(name) : "?"}
+          {getNameInitials(name)}
         </AvatarFallback>
       </Avatar>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{name}</span>
-        <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
-          {email ?? `Participante: ${chat.relatedUser}`}
-        </span>
-      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
       <time dateTime={chat.summarySortAt} title={new Date(chat.summarySortAt).toLocaleString("pt-BR")} className="self-start pt-0.5 text-[0.65rem] font-normal text-muted-foreground">
         {formatChatDate(chat.summarySortAt)}
       </time>
