@@ -16,13 +16,11 @@ import { mergeTimelinePages } from "@/lib/merge-timeline-pages";
 type ChatTimelineProps = {
   chatId: string;
   participantName?: string;
-  currentUserName?: string;
 };
 
 const ChatTimeline = ({
   chatId,
   participantName = "Participante",
-  currentUserName,
 }: ChatTimelineProps) => {
   const timeline = useTimeline(chatId);
   const { scrollContainerRef, loadOlderMessages } = useTimelineScroll({
@@ -69,7 +67,7 @@ const ChatTimeline = ({
         )}
 
         {timeline.data && (
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-7 px-4 py-6 sm:px-8 sm:py-8">
+          <div className="flex w-full flex-col gap-4 px-4 py-6 sm:px-8 sm:py-8">
             {timeline.hasNextPage && !timeline.isFetchNextPageError && (
               <Button
                 variant="ghost"
@@ -114,11 +112,7 @@ const ChatTimeline = ({
                   {currentDay !== previousDay && (
                     <TimelineDayDivider label={formatTimelineDate(item.createdAt)} />
                   )}
-                  <TimelineMessage
-                    item={item}
-                    participantName={participantName}
-                    currentUserName={currentUserName}
-                  />
+                  <TimelineMessage item={item} />
                 </div>
               );
             })}

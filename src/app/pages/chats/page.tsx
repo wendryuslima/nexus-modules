@@ -31,9 +31,6 @@ const ChatsPage = () => {
   });
   const selectedChat = loadedChats.find((chat) => chat.id === chatId);
   const selectedUserEmail = selectedChat?.relatedUserEmail;
-  const currentUserName = session.data?.user?.email
-    ? getUserDisplayName(session.data.user.email)
-    : undefined;
 
   return (
     <AppShell currentUserEmail={session.data?.user?.email ?? null}>
@@ -89,7 +86,6 @@ const ChatsPage = () => {
               <ChatTimeline
                 chatId={chatId}
                 participantName={selectedUserEmail ? getUserDisplayName(selectedUserEmail) : undefined}
-                currentUserName={currentUserName}
               />
             ) : (
               <ChatPlaceholder />
