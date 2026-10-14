@@ -126,7 +126,7 @@ const ChatTimeline = ({
         )}
       </div>
 
-      <MessageComposer chatId={chatId} participantName={participantName} />
+      <MessageComposer key={chatId} chatId={chatId} participantName={participantName} />
     </section>
   );
 };

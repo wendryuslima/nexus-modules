@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { chatsQueryKeys } from "@/hooks/chats/chats-query-keys";
-import { listMockTimeline } from "@/services/chats/mock-timeline";
+import { listTimeline } from "@/services/chats/list-timeline";
 import type { ListTimelineParams } from "@/types/chats/timeline-dto";
 
 const TIMELINE_PAGE_SIZE = 50;
@@ -12,7 +12,7 @@ const useTimeline = (chatId: string | undefined) => {
   return useInfiniteQuery({
     queryKey: chatsQueryKeys.timeline(chatId ?? "", TIMELINE_PAGE_SIZE),
     queryFn: ({ pageParam, signal }) =>
-      listMockTimeline(chatId ?? "", pageParam, signal),
+      listTimeline(chatId ?? "", pageParam, signal),
     initialPageParam,
     getNextPageParam: ({ data }): ListTimelineParams | undefined => {
       if (!data.pagination.hasNext || !data.pagination.nextCursor) return undefined;

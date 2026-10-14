@@ -1,9 +1,11 @@
-import { useState, type FormEvent, type KeyboardEvent } from "react";
-import { CirclePlus, Paperclip, Send, Smile } from "lucide-react";
+import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSendTimelineMessage } from "@/hooks/chats/use-send-timeline-message";
+import { ApiError } from "@/services/http/api-error";
+import type { CreateMessageRequestDto } from "@/types/chats/message-dto";
 
 type MessageComposerProps = {
   chatId: string;
@@ -12,6 +14,7 @@ type MessageComposerProps = {
 
 const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
   const [message, setMessage] = useState("");
+  const retryPayload = useRef<CreateMessageRequestDto | null>(null);
   const sendMessage = useSendTimelineMessage(chatId);
   const canSend = message.trim().length > 0 && !sendMessage.isPending;
 
@@ -20,10 +23,25 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
     const content = message.trim();
     if (!content || sendMessage.isPending) return;
 
+    const previous = retryPayload.current;
+    const payload: CreateMessageRequestDto =
+      previous?.content.value === content
+        ? previous
+        : { clientMessageId: crypto.randomUUID(), content: { type: "TEXT", value: content } };
+    retryPayload.current = payload;
+
     sendMessage.mutate(
-      { content },
+      payload,
       {
-        onSuccess: () => setMessage(""),
+        onSuccess: () => {
+          retryPayload.current = null;
+          setMessage((current) => current.trim() === content ? "" : current);
+        },
+        onError: (error) => {
+          if (error instanceof ApiError && error.code === "idempotency_conflict") {
+            retryPayload.current = null;
+          }
+        },
       },
     );
   };
@@ -43,7 +61,14 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
       >
         <Textarea
           value={message}
-          onChange={(event) => setMessage(event.target.value)}
+          disabled={sendMessage.isPending}
+          onChange={(event) => {
+            setMessage(event.target.value);
+            if (retryPayload.current && event.target.value.trim() !== retryPayload.current.content.value) {
+              retryPayload.current = null;
+              sendMessage.reset();
+            }
+          }}
           onKeyDown={handleKeyDown}
           aria-label={`Mensagem para ${participantName}`}
           placeholder={`Mensagem para ${participantName}`}
@@ -52,23 +77,13 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
         />
 
         <div className="flex items-center gap-0.5 px-2 pb-2">
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Adicionar conteúdo" title="Adicionar conteúdo">
-            <CirclePlus aria-hidden="true" />
-          </Button>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Adicionar emoji" title="Adicionar emoji">
-            <Smile aria-hidden="true" />
-          </Button>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Anexar arquivo" title="Anexar arquivo">
-            <Paperclip aria-hidden="true" />
-          </Button>
-
           <Button
             type="submit"
             size="icon-lg"
             className="ml-auto"
             disabled={!canSend}
-            aria-label="Enviar mensagem"
-            title="Enviar mensagem"
+            aria-label={sendMessage.isError ? "Tentar enviar novamente" : "Enviar mensagem"}
+            title={sendMessage.isError ? "Tentar enviar novamente" : "Enviar mensagem"}
           >
             <Send aria-hidden="true" />
           </Button>

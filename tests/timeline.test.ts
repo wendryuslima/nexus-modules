@@ -3,6 +3,7 @@ import { afterEach, expect, test } from "bun:test";
 import { queryClient } from "../src/lib/query-client";
 import { mergeTimelinePages } from "../src/lib/merge-timeline-pages";
 import { createDirectChat } from "../src/services/chats/create-direct-chat";
+import { createMessage } from "../src/services/chats/create-message";
 import { listTimeline } from "../src/services/chats/list-timeline";
 import type { TimelineItemDto } from "../src/types/chats/timeline-dto";
 
@@ -35,6 +36,34 @@ const timelineItem = (id: string, createdAt: string): TimelineItemDto => ({
 afterEach(() => {
   globalThis.fetch = originalFetch;
   queryClient.clear();
+});
+
+test("cria mensagem com ID idempotente e aceita resposta de retry", async () => {
+  const payload = {
+    clientMessageId: "018f92d4-2c47-7c87-b33e-d2ea331d2ff2",
+    content: { type: "TEXT" as const, value: "Olá!" },
+  };
+  const persisted = {
+    id: "message-id",
+    clientMessageId: payload.clientMessageId,
+    chatId: "chat/+?",
+    sequence: 1,
+    senderId: "user-id",
+    content: payload.content,
+    createdAt: "2026-10-13T12:00:00Z",
+    deliveryStatus: "PERSISTED",
+  };
+
+  globalThis.fetch = (async (input, init) => {
+    expect(new URL(String(input)).pathname).toBe("/v1/chats/chat%2F%2B%3F/messages");
+    expect(init?.method).toBe("POST");
+    expect(init?.credentials).toBe("include");
+    expect(new Headers(init?.headers).get("Content-Type")).toBe("application/json");
+    expect(JSON.parse(String(init?.body))).toEqual(payload);
+    return Response.json({ data: persisted }, { status: 200 });
+  }) as typeof fetch;
+
+  expect(await createMessage("chat/+?", payload)).toEqual({ data: persisted });
 });
 
 test("cria ou recupera o chat direto enviando somente o usuário relacionado", async () => {

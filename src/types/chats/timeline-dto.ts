@@ -53,10 +53,6 @@ type ListTimelineResponseDto = {
   };
 };
 
-type SendTimelineMessagePayload = {
-  content: string;
-};
-
 export type {
   ListTimelineParams,
   ListTimelineResponseDto,
@@ -67,5 +63,4 @@ export type {
   TimelineReactionDto,
   TimelineReplyDto,
   TimelineTextContentDto,
-  SendTimelineMessagePayload,
 };
