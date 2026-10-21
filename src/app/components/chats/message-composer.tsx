@@ -14,6 +14,7 @@ type MessageComposerProps = {
 
 const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
   const [message, setMessage] = useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const retryPayload = useRef<CreateMessageRequestDto | null>(null);
   const sendMessage = useSendTimelineMessage(chatId);
   const canSend = message.trim().length > 0 && !sendMessage.isPending;
@@ -29,6 +30,8 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
         ? previous
         : { clientMessageId: crypto.randomUUID(), content: { type: "TEXT", value: content } };
     retryPayload.current = payload;
+
+    inputRef.current?.focus({ preventScroll: true });
 
     sendMessage.mutate(
       payload,
@@ -60,8 +63,9 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
         onSubmit={handleSubmit}
       >
         <Textarea
+          ref={inputRef}
           value={message}
-          disabled={sendMessage.isPending}
+          readOnly={sendMessage.isPending}
           onChange={(event) => {
             setMessage(event.target.value);
             if (retryPayload.current && event.target.value.trim() !== retryPayload.current.content.value) {
