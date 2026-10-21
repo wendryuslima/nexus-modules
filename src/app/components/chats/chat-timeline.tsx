@@ -8,6 +8,7 @@ import { TimelineHeader } from "@/app/components/chats/timeline-header";
 import { TimelineMessage } from "@/app/components/chats/timeline-message";
 import { TimelineSkeleton } from "@/app/components/chats/timeline-skeleton";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTimeline } from "@/hooks/chats/use-timeline";
 import { useTimelineScroll } from "@/hooks/chats/use-timeline-scroll";
 import { calendarDayKey, formatTimelineDate } from "@/lib/format-timeline-date";
@@ -49,9 +50,9 @@ const ChatTimeline = ({
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
       <TimelineHeader participantName={participantName} />
 
-      <div
-        ref={scrollContainerRef}
-        className="min-h-0 flex-1 overflow-y-auto"
+      <ScrollArea
+        viewportRef={scrollContainerRef}
+        className="min-h-0 flex-1"
         aria-live="polite"
       >
         {timeline.isPending && <TimelineSkeleton />}
@@ -118,7 +119,7 @@ const ChatTimeline = ({
             })}
           </div>
         )}
-      </div>
+      </ScrollArea>
 
       <MessageComposer key={chatId} chatId={chatId} participantName={participantName} />
     </section>
