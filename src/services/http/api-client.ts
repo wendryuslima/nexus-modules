@@ -9,6 +9,7 @@ const apiRequest = async <T>(path: string, init: RequestInit): Promise<T> => {
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
     credentials: "include",
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -32,4 +33,4 @@ const apiRequest = async <T>(path: string, init: RequestInit): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
-export { apiRequest };
+export { apiRequest, apiUrl };

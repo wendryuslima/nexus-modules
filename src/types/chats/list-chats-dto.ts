@@ -1,4 +1,5 @@
 type ChatDto = {
+  lastSequence: number;
   id: string;
   relatedUser: string;
   relatedUserEmail: string;

@@ -1,5 +1,5 @@
 import { MessageCircle, RefreshCw } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
 import RequestErrorAlert from "@/app/components/auth/request-error-alert";
 import { MessageComposer } from "@/app/components/chats/message-composer";
@@ -13,6 +13,7 @@ import { useTimeline } from "@/hooks/chats/use-timeline";
 import { useTimelineScroll } from "@/hooks/chats/use-timeline-scroll";
 import { calendarDayKey, formatTimelineDate } from "@/lib/format-timeline-date";
 import { mergeTimelinePages } from "@/lib/merge-timeline-pages";
+import { useRealtimeStatus } from "@/hooks/chats/use-realtime-status";
 
 type ChatTimelineProps = {
   chatId: string;
@@ -24,31 +25,31 @@ const ChatTimeline = ({
   participantName = "Participante",
 }: ChatTimelineProps) => {
   const timeline = useTimeline(chatId);
-  const { scrollContainerRef, loadOlderMessages } = useTimelineScroll({
-    chatId,
-    isTimelineLoaded: Boolean(timeline.data),
-    fetchOlderMessages: timeline.fetchNextPage,
-  });
+  const realtimeStatus = useRealtimeStatus();
   const items = useMemo(
-    () => (timeline.data ? mergeTimelinePages(timeline.data.pages) : []),
+    () => (timeline.data ? mergeTimelinePages(timeline.data.pages, timeline.data.liveMessages) : []),
     [timeline.data],
   );
   const latestItem = items.at(-1);
-
-  useEffect(() => {
-    if (!latestItem?.message.isMine) return;
-
-    requestAnimationFrame(() => {
-      scrollContainerRef.current?.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    });
-  }, [latestItem?.id, latestItem?.message.isMine, scrollContainerRef]);
+  const { scrollContainerRef, loadOlderMessages, newMessages, scrollToLatest } = useTimelineScroll({
+    chatId,
+    isTimelineLoaded: Boolean(timeline.data),
+    fetchOlderMessages: timeline.fetchNextPage,
+    latestItemId: latestItem?.id,
+    latestItemIsMine: latestItem?.message.isMine,
+  });
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
       <TimelineHeader participantName={participantName} />
+      {realtimeStatus !== "connected" && (
+        <p role="status" className="border-b px-4 py-2 text-center text-xs text-muted-foreground">
+          {realtimeStatus === "syncing" ? "Sincronizando mensagens..." :
+            realtimeStatus === "offline" ? "Sem conexão. Verifique a rede antes de tentar enviar novamente." :
+            realtimeStatus === "incompatible" ? "Atualize a página para continuar recebendo mensagens em tempo real." :
+            realtimeStatus === "stopped" ? "Atualização em tempo real interrompida. Recarregue a página para tentar novamente." : "Reconectando..."}
+        </p>
+      )}
 
       <ScrollArea
         viewportRef={scrollContainerRef}
@@ -69,6 +70,14 @@ const ChatTimeline = ({
 
         {timeline.data && (
           <div className="flex w-full flex-col gap-4 px-4 py-6 sm:px-8 sm:py-8">
+            {timeline.isRefetchError && (
+              <div className="space-y-2">
+                <RequestErrorAlert message="Não foi possível atualizar as mensagens pelo servidor." />
+                <Button variant="outline" size="sm" onClick={() => timeline.refetch()} disabled={timeline.isFetching}>
+                  Tentar novamente
+                </Button>
+              </div>
+            )}
             {timeline.hasNextPage && !timeline.isFetchNextPageError && (
               <Button
                 variant="ghost"
@@ -121,6 +130,7 @@ const ChatTimeline = ({
         )}
       </ScrollArea>
 
+      {newMessages && <Button variant="secondary" className="mx-auto my-2" onClick={scrollToLatest}>Novas mensagens ↓</Button>}
       <MessageComposer key={chatId} chatId={chatId} participantName={participantName} />
     </section>
   );

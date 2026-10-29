@@ -15,13 +15,14 @@ import { useChats } from "@/hooks/chats/use-chats";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { getUserDisplayName } from "@/lib/get-user-display-name";
 import { cn } from "@/lib/utils";
+import { visibleChats } from "@/lib/realtime-view-data";
 
 const ChatsPage = () => {
   const session = useAuthSession();
   const chats = useChats();
   const { chatId } = useParams<{ chatId: string }>();
 
-  const loadedChats = chats.data?.pages.flatMap((page) => page.data) ?? [];
+  const loadedChats = chats.data ? visibleChats(chats.data) : [];
   const { scrollAreaRef, sentinelRef } = useInfiniteScroll({
     hasNextPage: Boolean(chats.hasNextPage),
     isFetchingNextPage: chats.isFetchingNextPage,
@@ -84,6 +85,7 @@ const ChatsPage = () => {
             )}
             {chatId ? (
               <ChatTimeline
+                key={chatId}
                 chatId={chatId}
                 participantName={selectedUserEmail ? getUserDisplayName(selectedUserEmail) : undefined}
               />

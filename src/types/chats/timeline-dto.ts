@@ -20,6 +20,7 @@ type TimelineReactionDto = {
 };
 
 type TimelineMessageDto = {
+  clientMessageId?: string;
   senderId: string;
   isMine: boolean;
   content: TimelineTextContentDto;
@@ -28,6 +29,7 @@ type TimelineMessageDto = {
 };
 
 type TimelineItemDto = {
+  sequence: number;
   id: string;
   kind: "MESSAGE";
   createdAt: string;
@@ -36,18 +38,25 @@ type TimelineItemDto = {
 };
 
 type TimelinePaginationDto = {
+  nextBeforeSequence?: number | null;
+  nextAfterSequence?: number | null;
   hasNext: boolean;
   nextCursor: TimelineCursorDto | null;
   pageSize: number;
 };
 
 type ListTimelineParams = {
+  order?: "sequence";
+  beforeSequence?: number;
+  afterSequence?: number;
+  throughSequence?: number;
   pageSize: number;
   cursor?: TimelineCursorDto;
 };
 
 type ListTimelineResponseDto = {
   data: {
+    snapshotThroughSequence?: number;
     items: TimelineItemDto[];
     pagination: TimelinePaginationDto;
   };

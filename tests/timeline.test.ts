@@ -1,11 +1,14 @@
 import { afterEach, expect, test } from "bun:test";
+import { QueryObserver } from "@tanstack/react-query";
 
 import { queryClient } from "../src/lib/query-client";
 import { mergeTimelinePages } from "../src/lib/merge-timeline-pages";
+import { invalidateBackendQuery } from "../src/lib/invalidate-backend-query";
 import { createDirectChat } from "../src/services/chats/create-direct-chat";
 import { createMessage } from "../src/services/chats/create-message";
 import { listTimeline } from "../src/services/chats/list-timeline";
 import type { TimelineItemDto } from "../src/types/chats/timeline-dto";
+import { resumeSession } from "../src/services/auth/session-lifecycle";
 
 const originalFetch = globalThis.fetch;
 const chat = {
@@ -21,7 +24,8 @@ const emptyTimeline = {
     pagination: { hasNext: false, nextCursor: null, pageSize: 50 },
   },
 };
-const timelineItem = (id: string, createdAt: string): TimelineItemDto => ({
+const timelineItem = (id: string, createdAt: string, sequence = 1): TimelineItemDto => ({
+  sequence,
   id,
   kind: "MESSAGE",
   createdAt,
@@ -36,6 +40,7 @@ const timelineItem = (id: string, createdAt: string): TimelineItemDto => ({
 afterEach(() => {
   globalThis.fetch = originalFetch;
   queryClient.clear();
+  resumeSession();
 });
 
 test("cria mensagem com ID idempotente e aceita resposta de retry", async () => {
@@ -86,6 +91,7 @@ test("carrega a primeira página da timeline pelo chatId sem cursor ou corpo", a
     expect(url.pathname).toBe("/v1/chats/chat-id/timeline");
     expect([...url.searchParams.entries()]).toEqual([["pageSize", "50"]]);
     expect(init?.method).toBe("GET");
+    expect(init?.cache).toBe("no-store");
     expect(init?.credentials).toBe("include");
     expect(init?.body).toBeUndefined();
     expect(new Headers(init?.headers).has("Content-Type")).toBe(false);
@@ -126,8 +132,8 @@ test("insere páginas antigas antes das recentes sem reordenar os itens da pági
   const recentPage = {
     data: {
       items: [
-        timelineItem("recent-1", "2026-09-27T10:00:00.000Z"),
-        timelineItem("recent-2", "2026-09-27T11:00:00.000Z"),
+        timelineItem("recent-1", "2026-09-27T10:00:00.000Z", 3),
+        timelineItem("recent-2", "2026-09-27T11:00:00.000Z", 4),
       ],
       pagination: {
         hasNext: true,
@@ -139,8 +145,8 @@ test("insere páginas antigas antes das recentes sem reordenar os itens da pági
   const olderPage = {
     data: {
       items: [
-        timelineItem("older-1", "2026-09-26T10:00:00.000Z"),
-        timelineItem("older-2", "2026-09-26T11:00:00.000Z"),
+        timelineItem("older-1", "2026-09-26T10:00:00.000Z", 1),
+        timelineItem("older-2", "2026-09-26T11:00:00.000Z", 2),
       ],
       pagination: { hasNext: false, nextCursor: null, pageSize: 50 },
     },
@@ -152,4 +158,54 @@ test("insere páginas antigas antes das recentes sem reordenar os itens da pági
     "recent-1",
     "recent-2",
   ]);
+});
+
+test("queries sem observadores são descartadas e reabrir a tela consulta novamente", async () => {
+  const key = ["chats", "timeline", "discard-on-unmount", 50];
+  let requests = 0;
+  const options = { queryKey: key, queryFn: async () => ++requests };
+  const first = new QueryObserver(queryClient, options);
+  const unsubscribe = first.subscribe(() => {});
+  try {
+    await first.refetch();
+    expect(first.getCurrentResult().data).toBe(1);
+  } finally {
+    unsubscribe();
+  }
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(queryClient.getQueryData(key)).toBeUndefined();
+  const second = new QueryObserver(queryClient, options);
+  const unsubscribeSecond = second.subscribe(() => {});
+  try {
+    expect(second.getCurrentResult().data).toBeUndefined();
+    await second.refetch();
+    expect(second.getCurrentResult().data).toBe(2);
+  } finally {
+    unsubscribeSecond();
+  }
+});
+
+test("recuperação durante carga inicial exige uma leitura HTTP posterior", async () => {
+  let requests = 0;
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  globalThis.fetch = (async () => {
+    const request = ++requests;
+    if (request === 1) await gate;
+    return Response.json({ data: { ...emptyTimeline.data, items: request === 1 ? [] : [timelineItem("persisted", "2026-10-28T12:00:00Z")] } });
+  }) as typeof fetch;
+  const key = ["chats", "timeline", "chat-id", 50];
+  const observer = new QueryObserver(queryClient, {
+    queryKey: key, queryFn: ({ signal }) => listTimeline("chat-id", { pageSize: 50 }, signal),
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  try {
+    const update = invalidateBackendQuery(queryClient, key, () => true);
+    release();
+    await update;
+    expect(requests).toBe(2);
+    expect(observer.getCurrentResult().data?.data.items.map((item) => item.id)).toEqual(["persisted"]);
+  } finally {
+    unsubscribe();
+  }
 });

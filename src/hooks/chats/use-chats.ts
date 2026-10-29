@@ -2,12 +2,13 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { chatsQueryKeys } from "@/hooks/chats/chats-query-keys";
 import { listChats } from "@/services/chats/list-chats";
-import type { ListChatsParams } from "@/types/chats/list-chats-dto";
+import type { ListChatsParams, ListChatsResponseDto } from "@/types/chats/list-chats-dto";
+import { preserveLiveChats, type ChatsViewData } from "@/lib/realtime-view-data";
 
 const useChats = () => {
   const initialPageParam: ListChatsParams = { page: 1, pageSize: 30 };
 
-  return useInfiniteQuery({
+  return useInfiniteQuery<ListChatsResponseDto, Error, ChatsViewData, ReturnType<typeof chatsQueryKeys.list>, ListChatsParams>({
     queryKey: chatsQueryKeys.list(initialPageParam.pageSize),
     queryFn: ({ pageParam, signal }) => listChats(pageParam, signal),
     initialPageParam,
@@ -21,6 +22,9 @@ const useChats = () => {
       };
     },
     retry: false,
+    structuralSharing: preserveLiveChats,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
 

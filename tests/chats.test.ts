@@ -5,6 +5,7 @@ import { queryClient } from "../src/lib/query-client";
 import { formatChatDate } from "../src/lib/format-chat-date";
 import { listChats } from "../src/services/chats/list-chats";
 import { listUsers } from "../src/services/users/list-users";
+import { resumeSession } from "../src/services/auth/session-lifecycle";
 
 const originalFetch = globalThis.fetch;
 const firstPage = { page: 1, pageSize: 30 };
@@ -26,6 +27,7 @@ const unauthorized = () => Response.json({
 afterEach(() => {
   globalThis.fetch = originalFetch;
   queryClient.clear();
+  resumeSession();
 });
 
 test("primeira página envia cookies, sem corpo, Content-Type ou cursor", async () => {
@@ -85,6 +87,7 @@ test("chats e usuários compartilham uma renovação de sessão simultânea", as
   const requests = new Map<string, number>();
   globalThis.fetch = (async (input) => {
     const path = new URL(String(input)).pathname;
+    if (path === "/v1/auth/session") return refreshes ? Response.json({ data: { user: { id: "user-1", email: "user@example.com" }, accessExpiresAt: "2099-01-01T00:00:00Z" } }) : unauthorized();
     if (path === "/v1/auth/refresh") {
       refreshes++;
       await refreshGate;
@@ -108,6 +111,7 @@ test("a requisição original é repetida no máximo uma vez", async () => {
   let requests = 0;
   let refreshes = 0;
   globalThis.fetch = (async (input) => {
+    if (new URL(String(input)).pathname === "/v1/auth/session") return refreshes ? Response.json({ data: { user: { id: "user-1", email: "user@example.com" }, accessExpiresAt: "2099-01-01T00:00:00Z" } }) : unauthorized();
     if (new URL(String(input)).pathname === "/v1/auth/refresh") {
       refreshes++;
       return new Response(null, { status: 204 });
