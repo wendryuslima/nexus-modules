@@ -43,6 +43,7 @@ if (channel) channel.onmessage = ({ data }: MessageEvent<unknown>) => {
     void queryClient.cancelQueries();
     queryClient.removeQueries({ queryKey: ["chats"] });
     queryClient.removeQueries({ queryKey: ["users"] });
+    queryClient.removeQueries({ queryKey: ["images"] });
     resumeSession();
     void queryClient.resetQueries({ queryKey: authQueryKeys.session() });
   }

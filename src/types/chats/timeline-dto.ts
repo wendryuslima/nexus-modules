@@ -1,12 +1,11 @@
+import type { MessageContentDto, TextContentDto } from "@/types/chats/message-dto";
+
 type TimelineCursorDto = {
   id: string;
   createdAt: string;
 };
 
-type TimelineTextContentDto = {
-  type: "TEXT";
-  value: string;
-};
+type TimelineTextContentDto = TextContentDto;
 
 type TimelineReplyDto = {
   authorName: string;
@@ -23,7 +22,7 @@ type TimelineMessageDto = {
   clientMessageId?: string;
   senderId: string;
   isMine: boolean;
-  content: TimelineTextContentDto;
+  content: MessageContentDto;
   replyTo?: TimelineReplyDto;
   reactions?: TimelineReactionDto[];
 };

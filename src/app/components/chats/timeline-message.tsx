@@ -1,6 +1,7 @@
 import { formatTimelineTime } from "@/lib/format-timeline-date";
 import { cn } from "@/lib/utils";
 import type { TimelineItemDto } from "@/types/chats/timeline-dto";
+import { TimelineImage } from "@/app/components/chats/timeline-image";
 
 type TimelineMessageProps = {
   item: TimelineItemDto;
@@ -18,7 +19,7 @@ const TimelineMessage = ({ item }: TimelineMessageProps) => {
         <div
           className={cn(
             "min-w-0 rounded-md px-3 py-2 text-sm leading-relaxed",
-            isMine ? "bg-ice-deep text-foreground" : "bg-[#f3f4f6] text-foreground",
+            isMine ? "bg-secondary text-foreground" : "bg-muted text-foreground",
           )}
         >
           {item.message.replyTo && (
@@ -26,7 +27,12 @@ const TimelineMessage = ({ item }: TimelineMessageProps) => {
               <span className="block break-words">{item.message.replyTo.content}</span>
             </blockquote>
           )}
-          <p className="whitespace-pre-wrap break-words">{item.message.content.value}</p>
+          {item.message.content.type === "IMAGE" ? (
+            <>
+              <TimelineImage key={item.message.content.imageId} imageId={item.message.content.imageId} caption={item.message.content.caption} />
+              {item.message.content.caption && <p className="mt-2 whitespace-pre-wrap break-words">{item.message.content.caption}</p>}
+            </>
+          ) : <p className="whitespace-pre-wrap break-words">{item.message.content.value}</p>}
           <time
             className="mt-1 block text-[0.65rem] text-muted-foreground"
             dateTime={item.createdAt}

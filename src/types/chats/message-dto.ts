@@ -1,7 +1,15 @@
-type MessageContentDto = {
+type TextContentDto = {
   type: "TEXT";
   value: string;
 };
+
+type ImageContentDto = {
+  type: "IMAGE";
+  imageId: string;
+  caption?: string;
+};
+
+type MessageContentDto = TextContentDto | ImageContentDto;
 
 type CreateMessageRequestDto = {
   clientMessageId: string;
@@ -21,4 +29,4 @@ type MessageDto = {
 
 type CreateMessageResponseDto = { data: MessageDto };
 
-export type { CreateMessageRequestDto, CreateMessageResponseDto, MessageDto };
+export type { CreateMessageRequestDto, CreateMessageResponseDto, MessageDto, MessageContentDto, TextContentDto, ImageContentDto };
