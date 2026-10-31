@@ -21,7 +21,7 @@ test("upload usa multipart com os IDs estáveis e mantém erros do servidor", as
   await uploadImage(input);
   for (const request of requests) {
     expect(request.credentials).toBe("include");
-    expect(request.headers).toBeUndefined(); // The browser supplies the multipart boundary.
+    expect(request.headers).toBeUndefined();
     expect(request.body).toBeInstanceOf(FormData);
     const body = request.body as FormData;
     expect(body.get("clientUploadId")).toBe("upload-1");
