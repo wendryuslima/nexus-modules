@@ -6,9 +6,10 @@ type InfiniteScrollOptions = {
   isFetchNextPageError: boolean;
   itemCount: number;
   fetchNextPage: () => Promise<unknown>;
+  direction?: "top" | "bottom";
 };
 
-const useInfiniteScroll = ({ hasNextPage, isFetchingNextPage, isFetchNextPageError, itemCount, fetchNextPage }: InfiniteScrollOptions) => {
+const useInfiniteScroll = ({ hasNextPage, isFetchingNextPage, isFetchNextPageError, itemCount, fetchNextPage, direction = "bottom" }: InfiniteScrollOptions) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -23,10 +24,10 @@ const useInfiniteScroll = ({ hasNextPage, isFetchingNextPage, isFetchNextPageErr
         requested = true;
         void fetchNextPage();
       }
-    }, { root: viewport, rootMargin: "0px 0px 160px 0px" });
+    }, { root: viewport, rootMargin: direction === "top" ? "160px 0px 0px 0px" : "0px 0px 160px 0px" });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, itemCount, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, itemCount, fetchNextPage, direction]);
 
   return { scrollAreaRef, sentinelRef };
 };

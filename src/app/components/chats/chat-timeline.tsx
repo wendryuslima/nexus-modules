@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTimeline } from "@/hooks/chats/use-timeline";
 import { useTimelineScroll } from "@/hooks/chats/use-timeline-scroll";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { calendarDayKey, formatTimelineDate } from "@/lib/format-timeline-date";
 import { mergeTimelinePages } from "@/lib/merge-timeline-pages";
 import { useRealtimeStatus } from "@/hooks/chats/use-realtime-status";
@@ -38,6 +39,14 @@ const ChatTimeline = ({
     latestItemId: latestItem?.id,
     latestItemIsMine: latestItem?.message.isMine,
   });
+  const { scrollAreaRef, sentinelRef } = useInfiniteScroll({
+    hasNextPage: timeline.hasNextPage,
+    isFetchingNextPage: timeline.isFetchingNextPage,
+    isFetchNextPageError: timeline.isFetchNextPageError,
+    itemCount: items.length,
+    fetchNextPage: loadOlderMessages,
+    direction: "top",
+  });
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
@@ -52,6 +61,7 @@ const ChatTimeline = ({
       )}
 
       <ScrollArea
+        ref={scrollAreaRef}
         viewportRef={scrollContainerRef}
         className="min-h-0 flex-1"
         aria-live="polite"
@@ -79,14 +89,12 @@ const ChatTimeline = ({
               </div>
             )}
             {timeline.hasNextPage && !timeline.isFetchNextPageError && (
-              <Button
-                variant="ghost"
-                className="mx-auto text-primary"
-                onClick={loadOlderMessages}
-                disabled={timeline.isFetchingNextPage}
-              >
-                {timeline.isFetchingNextPage ? "Carregando..." : "Carregar mensagens anteriores"}
-              </Button>
+              <div ref={sentinelRef} aria-hidden="true" className="h-px" />
+            )}
+            {timeline.isFetchingNextPage && (
+              <p role="status" className="text-center text-sm text-muted-foreground">
+                Carregando mensagens anteriores...
+              </p>
             )}
 
             {timeline.isFetchNextPageError && timeline.error && (
