@@ -1,10 +1,11 @@
 import { ArrowLeft, MessageSquarePlus } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import RequestErrorAlert from "@/app/components/auth/request-error-alert";
 import { ChatListItem } from "@/app/components/chats/chat-list-item";
 import { ChatPlaceholder } from "@/app/components/chats/chat-placeholder";
 import { ChatTimeline } from "@/app/components/chats/chat-timeline";
+import { SearchField } from "@/app/components/chats/search-field";
 import { ChatsListSkeleton } from "@/app/components/chats/chats-list-skeleton";
 import { AppShell } from "@/app/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthSession } from "@/hooks/auth/use-auth-session";
 import { useChats } from "@/hooks/chats/use-chats";
+import { useChatDetail } from "@/hooks/chats/use-chat-detail";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { getUserDisplayName } from "@/lib/get-user-display-name";
 import { cn } from "@/lib/utils";
@@ -19,10 +21,12 @@ import { visibleChats } from "@/lib/realtime-view-data";
 
 const ChatsPage = () => {
   const session = useAuthSession();
-  const chats = useChats();
+  const [searchParams] = useSearchParams();
+  const query = (searchParams.get("q") ?? "").trim();
+  const chats = useChats(query);
   const { chatId } = useParams<{ chatId: string }>();
 
-  const loadedChats = chats.data ? visibleChats(chats.data) : [];
+  const loadedChats = chats.data ? (query ? chats.data.pages.flatMap((page) => page.data) : visibleChats(chats.data)) : [];
   const { scrollAreaRef, sentinelRef } = useInfiniteScroll({
     hasNextPage: Boolean(chats.hasNextPage),
     isFetchingNextPage: chats.isFetchingNextPage,
@@ -31,7 +35,8 @@ const ChatsPage = () => {
     fetchNextPage: chats.fetchNextPage,
   });
   const selectedChat = loadedChats.find((chat) => chat.id === chatId);
-  const selectedUserEmail = selectedChat?.relatedUserEmail;
+  const detail = useChatDetail(selectedChat ? undefined : chatId);
+  const selectedUserEmail = selectedChat?.relatedUserEmail ?? detail.data?.relatedUserEmail;
 
   return (
     <AppShell currentUserEmail={session.data?.user?.email ?? null}>
@@ -48,10 +53,11 @@ const ChatsPage = () => {
                 <MessageSquarePlus aria-hidden="true" className="size-4" />
               </Button>
             </header>
+            <div className="px-4 pb-4"><SearchField name="q" label="Buscar conversas por participante" /></div>
 
             <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1" aria-busy={chats.isFetching}>
               <div className="px-2 pb-4">
-              <h2 className="px-3 pb-2 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">Recentes</h2>
+              <h2 className="px-3 pb-2 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">{query ? "Resultados" : "Recentes"}</h2>
               {chats.isPending && <ChatsListSkeleton />}
               <ul className="space-y-0.5">
                 {loadedChats.map((chat) => {
@@ -66,7 +72,7 @@ const ChatsPage = () => {
               )}
               {!chats.isPending && !chats.error && loadedChats.length === 0 && (
                 <p role="status" className="px-3 py-6 text-sm text-muted-foreground">
-                  Você ainda não tem conversas.
+                  {query ? "Nenhuma conversa encontrada para essas palavras." : "Você ainda não tem conversas."}
                 </p>
               )}
               {chats.isFetchingNextPage && <p role="status" className="px-3 py-3 text-xs text-muted-foreground">Carregando conversas...</p>}
@@ -78,7 +84,7 @@ const ChatsPage = () => {
           <div className={cn("min-w-0 flex-1 flex-col md:flex", chatId ? "flex" : "hidden")}>
             {chatId && (
               <div className="border-b p-2 md:hidden">
-                <Button variant="ghost" render={<Link to="/chats" />} nativeButton={false}>
+                <Button variant="ghost" render={<Link to={{ pathname: "/chats", search: query ? `?${new URLSearchParams({ q: query })}` : "" }} />} nativeButton={false}>
                   <ArrowLeft aria-hidden="true" className="size-4" /> Voltar às conversas
                 </Button>
               </div>

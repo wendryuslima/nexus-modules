@@ -201,6 +201,10 @@ class RealtimeController {
 
   private applyEvent(event: MessageCreatedEvent): boolean {
     let waiting = false;
+    const historyKey = ["chats", "history-notification", event.data.chatId];
+    if (this.client.getQueryData<number>(historyKey) !== undefined) {
+      this.client.setQueryData<number>(historyKey, (previous = 0) => Math.max(previous, event.data.sequence));
+    }
     for (const query of this.client.getQueryCache().findAll({ queryKey: chatsQueryKeys.timelineForChat(event.data.chatId), type: "active" })) {
       const data = query.state.data as TimelineViewData | undefined;
       if (!data) { waiting = true; continue; }

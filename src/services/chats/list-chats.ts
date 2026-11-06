@@ -2,10 +2,11 @@ import { authenticatedApiRequest } from "@/services/http/authenticated-api-reque
 import type { ListChatsParams, ListChatsResponseDto } from "@/types/chats/list-chats-dto";
 
 const listChats = (
-  { page, pageSize, cursor }: ListChatsParams,
+  { page, pageSize, cursor, query }: ListChatsParams,
   signal?: AbortSignal,
 ): Promise<ListChatsResponseDto> => {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (query) params.set("q", query);
 
   if (page > 1 && cursor) {
     params.set("cursorId", cursor.id);

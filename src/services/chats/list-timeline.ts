@@ -6,10 +6,12 @@ import type {
 
 const listTimeline = (
   chatId: string,
-  { pageSize, cursor, order, beforeSequence, afterSequence, throughSequence }: ListTimelineParams,
+  { pageSize, cursor, order, beforeSequence, afterSequence, throughSequence, query, aroundSequence }: ListTimelineParams,
   signal?: AbortSignal,
 ): Promise<ListTimelineResponseDto> => {
   const params = new URLSearchParams({ pageSize: String(pageSize) });
+  if (query) params.set("q", query);
+  if (aroundSequence !== undefined) params.set("aroundSequence", String(aroundSequence));
   if (order) params.set("order", order);
   if (beforeSequence !== undefined) params.set("beforeSequence", String(beforeSequence));
   if (afterSequence !== undefined) params.set("afterSequence", String(afterSequence));

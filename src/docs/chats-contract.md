@@ -1,5 +1,33 @@
 # Contrato HTTP — Chats
 
+## Pesquisa e links diretos
+
+`GET /v1/chats?q=ana+silva` pesquisa palavras completas do e-mail do outro
+participante, antes da paginação. A pesquisa ignora caixa e acentos, exige todas
+as palavras e não faz correspondência parcial. Aceita até 200 caracteres e 8
+palavras distintas. Resultados usam cursor por criação e ID; repasse o cursor
+sem interpretá-lo. Na pesquisa, `totalItems` e `totalPages` são omitidos.
+
+`GET /v1/chats/{chatId}` retorna o envelope de listagem com uma conversa,
+independentemente das páginas carregadas. A participação é sempre validada.
+
+Mensagens usam `GET /v1/chats/{chatId}/timeline?order=sequence&q=contrato`.
+Para continuar, envie `beforeSequence` e o `throughSequence` do snapshot inicial.
+Para abrir a ocorrência diretamente, use
+`?order=sequence&aroundSequence=845&pageSize=51`, sem `q`. Navegue pelo contexto
+com `beforeSequence` ou `afterSequence`, conforme `hasOlder` e `hasNewer`.
+
+Na URL da aplicação, `q` guarda a busca de conversas, `messageQuery` a busca de
+mensagens e `message` a sequência selecionada. Exemplo:
+`/chats/chat-1?q=ana&messageQuery=contrato&message=845`.
+
+A digitação mantém um rascunho local. A busca e a atualização dos parâmetros da
+URL acontecem ao pressionar Enter. A pesquisa de mensagens possui apenas o botão
+de fechar; o campo não exibe outros botões de limpar.
+
+Os registros existentes precisam da migração `search-backfill` do backend antes
+de aparecerem nos resultados. Os contratos abaixo continuam válidos sem busca.
+
 Este documento descreve o contrato público que o frontend deve usar para criar e listar chats diretos.
 
 ## Visão geral

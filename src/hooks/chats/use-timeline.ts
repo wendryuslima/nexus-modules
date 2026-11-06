@@ -8,7 +8,7 @@ import { preserveLiveTimeline, type TimelineViewData } from "@/lib/realtime-view
 
 const TIMELINE_PAGE_SIZE = 50;
 
-const useTimeline = (chatId: string | undefined) => {
+const useTimeline = (chatId: string | undefined, enabled = true) => {
   const initialPageParam: ListTimelineParams = { pageSize: TIMELINE_PAGE_SIZE, order: "sequence" };
 
   return useInfiniteQuery<ListTimelineResponseDto, Error, TimelineViewData, ReturnType<typeof chatsQueryKeys.timeline>, ListTimelineParams>({
@@ -25,7 +25,7 @@ const useTimeline = (chatId: string | undefined) => {
         beforeSequence: data.pagination.nextBeforeSequence,
       };
     },
-    enabled: Boolean(chatId),
+    enabled: Boolean(chatId) && enabled,
     structuralSharing: preserveLiveTimeline,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

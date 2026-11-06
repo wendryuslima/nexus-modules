@@ -18,11 +18,12 @@ type ChatPaginationDto = {
   nextCursor: ChatCursorDto | null;
   page: number;
   pageSize: number;
-  totalItems: number;
-  totalPages: number;
+  totalItems?: number;
+  totalPages?: number;
 };
 
 type ListChatsParams = {
+  query?: string;
   page: number;
   pageSize: number;
   cursor?: ChatCursorDto;

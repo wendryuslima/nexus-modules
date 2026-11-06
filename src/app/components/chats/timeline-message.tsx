@@ -5,14 +5,16 @@ import { TimelineImage } from "@/app/components/chats/timeline-image";
 
 type TimelineMessageProps = {
   item: TimelineItemDto;
+  highlighted?: boolean;
 };
 
-const TimelineMessage = ({ item }: TimelineMessageProps) => {
+const TimelineMessage = ({ item, highlighted }: TimelineMessageProps) => {
   const isMine = item.message.isMine;
 
   return (
     <article
-      className={cn("flex w-full", isMine ? "justify-end" : "justify-start")}
+      data-sequence={item.sequence}
+      className={cn("flex w-full scroll-m-6 rounded-md", isMine ? "justify-end" : "justify-start", highlighted && "bg-primary/10 ring-2 ring-primary/60")}
       aria-label={isMine ? "Mensagem enviada" : "Mensagem recebida"}
     >
       <div className="flex max-w-[min(85%,42rem)] flex-col items-start">

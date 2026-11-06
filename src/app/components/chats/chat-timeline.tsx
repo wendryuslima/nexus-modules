@@ -1,8 +1,11 @@
 import { MessageCircle, RefreshCw } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import RequestErrorAlert from "@/app/components/auth/request-error-alert";
 import { MessageComposer } from "@/app/components/chats/message-composer";
+import { MessageSearch } from "@/app/components/chats/message-search";
 import { TimelineDayDivider } from "@/app/components/chats/timeline-day-divider";
 import { TimelineHeader } from "@/app/components/chats/timeline-header";
 import { TimelineMessage } from "@/app/components/chats/timeline-message";
@@ -10,6 +13,8 @@ import { TimelineSkeleton } from "@/app/components/chats/timeline-skeleton";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTimeline } from "@/hooks/chats/use-timeline";
+import { useTimelineContext } from "@/hooks/chats/use-timeline-context";
+import { chatsQueryKeys } from "@/hooks/chats/chats-query-keys";
 import { useTimelineScroll } from "@/hooks/chats/use-timeline-scroll";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { calendarDayKey, formatTimelineDate } from "@/lib/format-timeline-date";
@@ -25,22 +30,41 @@ const ChatTimeline = ({
   chatId,
   participantName = "Participante",
 }: ChatTimelineProps) => {
-  const timeline = useTimeline(chatId);
+  const [params, setParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const [searchOpened, setSearchOpened] = useState(false);
+  const rawAnchor = params.get("message");
+  const anchor = rawAnchor && /^\d+$/.test(rawAnchor) && Number.isSafeInteger(Number(rawAnchor)) && Number(rawAnchor) > 0 ? Number(rawAnchor) : undefined;
+  const searchOpen = searchOpened || params.has("messageQuery");
+  const liveTimeline = useTimeline(chatId, anchor === undefined);
+  const context = useTimelineContext(chatId, anchor);
+  const timeline = anchor === undefined ? liveTimeline : context;
+  const { data: latestNotifiedSequence } = useQuery({ queryKey: ["chats", "history-notification", chatId], initialData: 0, enabled: false, queryFn: () => 0 });
+  const returnToLatest = () => {
+    void queryClient.resetQueries({ queryKey: chatsQueryKeys.timelineForChat(chatId) });
+    setParams((current) => { const next = new URLSearchParams(current); next.delete("message"); return next; });
+  };
+  const closeSearch = () => {
+    setSearchOpened(false);
+    setParams((current) => { const next = new URLSearchParams(current); next.delete("messageQuery"); return next; }, { replace: true });
+  };
   const realtimeStatus = useRealtimeStatus();
   const items = useMemo(
-    () => (timeline.data ? mergeTimelinePages(timeline.data.pages, timeline.data.liveMessages) : []),
-    [timeline.data],
+    () => (timeline.data ? mergeTimelinePages(timeline.data.pages, anchor === undefined ? liveTimeline.data?.liveMessages : []) : []),
+    [timeline.data, anchor, liveTimeline.data?.liveMessages],
   );
   const latestItem = items.at(-1);
-  const { scrollContainerRef, loadOlderMessages, newMessages, scrollToLatest } = useTimelineScroll({
-    chatId,
+  const { scrollContainerRef, loadOlderMessages, loadNewerMessages, newMessages, scrollToLatest } = useTimelineScroll({
+    chatId: `${chatId}:${anchor ?? "latest"}`,
+    anchorSequence: anchor,
     isTimelineLoaded: Boolean(timeline.data),
     fetchOlderMessages: timeline.fetchNextPage,
+    fetchNewerMessages: context.fetchPreviousPage,
     latestItemId: latestItem?.id,
     latestItemIsMine: latestItem?.message.isMine,
   });
   const { scrollAreaRef, sentinelRef } = useInfiniteScroll({
-    hasNextPage: timeline.hasNextPage,
+    hasNextPage: anchor === undefined && timeline.hasNextPage,
     isFetchingNextPage: timeline.isFetchingNextPage,
     isFetchNextPageError: timeline.isFetchNextPageError,
     itemCount: items.length,
@@ -50,7 +74,13 @@ const ChatTimeline = ({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-      <TimelineHeader participantName={participantName} />
+      <TimelineHeader participantName={participantName} onSearch={() => setSearchOpened(true)} searchOpen={searchOpen} />
+      {searchOpen && <MessageSearch chatId={chatId} onClose={closeSearch} />}
+      {rawAnchor && anchor === undefined && <div className="space-y-2 p-4"><RequestErrorAlert message="A referência da mensagem é inválida." /><Button size="sm" variant="outline" onClick={returnToLatest}>Ir às mais recentes</Button></div>}
+      {anchor !== undefined && <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2 text-xs text-muted-foreground">
+        <span>{latestNotifiedSequence > (context.data?.pages[0]?.data.snapshotThroughSequence ?? latestNotifiedSequence) ? "Novas mensagens chegaram enquanto você consulta o histórico." : "Você está consultando o histórico da conversa."}</span>
+        <Button size="sm" variant="outline" onClick={returnToLatest}>Ir às mais recentes</Button>
+      </div>}
       {realtimeStatus !== "connected" && (
         <p role="status" className="border-b px-4 py-2 text-center text-xs text-muted-foreground">
           {realtimeStatus === "syncing" ? "Sincronizando mensagens..." :
@@ -88,9 +118,10 @@ const ChatTimeline = ({
                 </Button>
               </div>
             )}
-            {timeline.hasNextPage && !timeline.isFetchNextPageError && (
+            {anchor === undefined && timeline.hasNextPage && !timeline.isFetchNextPageError && (
               <div ref={sentinelRef} aria-hidden="true" className="h-px" />
             )}
+            {anchor !== undefined && context.hasNextPage && !context.isFetchNextPageError && <Button variant="ghost" size="sm" disabled={context.isFetching} onClick={loadOlderMessages}>Carregar mensagens anteriores</Button>}
             {timeline.isFetchingNextPage && (
               <p role="status" className="text-center text-sm text-muted-foreground">
                 Carregando mensagens anteriores...
@@ -130,15 +161,17 @@ const ChatTimeline = ({
                   {currentDay !== previousDay && (
                     <TimelineDayDivider label={formatTimelineDate(item.createdAt)} />
                   )}
-                  <TimelineMessage item={item} />
+                  <TimelineMessage item={item} highlighted={item.sequence === anchor} />
                 </div>
               );
             })}
+            {anchor !== undefined && context.hasPreviousPage && !context.isFetchPreviousPageError && <Button variant="ghost" size="sm" disabled={context.isFetching} onClick={loadNewerMessages}>{context.isFetchingPreviousPage ? "Carregando..." : "Carregar mensagens posteriores"}</Button>}
+            {anchor !== undefined && context.isFetchPreviousPageError && <div className="space-y-2"><RequestErrorAlert message={context.error?.message ?? "Não foi possível carregar as mensagens posteriores."} /><Button variant="outline" size="sm" disabled={context.isFetching} onClick={loadNewerMessages}>Tentar novamente</Button></div>}
           </div>
         )}
       </ScrollArea>
 
-      {newMessages && <Button variant="secondary" className="mx-auto my-2" onClick={scrollToLatest}>Novas mensagens ↓</Button>}
+      {anchor === undefined && newMessages && <Button variant="secondary" className="mx-auto my-2" onClick={scrollToLatest}>Novas mensagens ↓</Button>}
       <MessageComposer key={chatId} chatId={chatId} participantName={participantName} />
     </section>
   );

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import { InfiniteQueryObserver, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { RealtimeController } from "../src/services/realtime/controller";
+import { chatsQueryKeys } from "../src/hooks/chats/chats-query-keys";
 import { preserveLiveTimeline, preserveLiveChats, visibleChats, type TimelineViewData as TimelineData, type ChatsViewData } from "../src/lib/realtime-view-data";
 import { mergeTimelinePages } from "../src/lib/merge-timeline-pages";
 import type { ListChatsResponseDto } from "../src/types/chats/list-chats-dto";
@@ -371,4 +372,38 @@ test("nova conversa agrupa descoberta e não carrega timeline fechada", async ()
   await until(() => listRequests === 2);
   expect(client.getQueryData(["chats", "timeline", "new-chat", 50])).toBeUndefined();
   expect(states.at(-1)).toBe("connected");
+});
+
+
+test("janela histórica recebe aviso sem buscar lacunas ou alterar resultados da pesquisa", async () => {
+  let timelineRequests = 0;
+  globalThis.fetch = (async (input) => {
+    if (new URL(String(input)).pathname === "/v1/auth/session") return auth();
+    timelineRequests++;
+    return Response.json(page([1000]));
+  }) as typeof fetch;
+  const { client, controller, states, observer } = fixture(initial);
+  observer.setOptions({ ...observer.options, enabled: false });
+  const contextData = page([75, 100, 125]);
+  const historyKey = chatsQueryKeys.history("chat-1", 100);
+  const historical = new QueryObserver(client, { queryKey: historyKey, initialData: contextData, queryFn: async () => { timelineRequests++; return contextData; } });
+  const searchKey = chatsQueryKeys.messageSearch("chat-1", "contrato");
+  const search = new QueryObserver(client, { queryKey: searchKey, initialData: contextData, queryFn: async () => { timelineRequests++; return contextData; } });
+  const unsubscribeHistory = historical.subscribe(() => {});
+  const unsubscribeSearch = search.subscribe(() => {});
+  cleanups.push(unsubscribeHistory, unsubscribeSearch);
+  const notification = ["chats", "history-notification", "chat-1"];
+  client.setQueryData(notification, 0);
+  controller.start();
+  await until(() => TestWebSocket.instances.length === 1);
+  const socket = TestWebSocket.instances[0];
+  socket.frame(ready);
+  await until(() => states.at(-1) === "connected");
+  socket.frame(event(1001));
+  socket.frame(event(1000));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(timelineRequests).toBe(0);
+  expect(client.getQueryData(notification)).toBe(1001);
+  expect(client.getQueryData(historyKey)).toEqual(contextData);
+  expect(client.getQueryData(searchKey)).toEqual(contextData);
 });

@@ -6,9 +6,11 @@ import { getNameInitials } from "@/lib/get-name-initials";
 
 type TimelineHeaderProps = {
   participantName: string;
+  onSearch?: () => void;
+  searchOpen?: boolean;
 };
 
-const TimelineHeader = ({ participantName }: TimelineHeaderProps) => (
+const TimelineHeader = ({ participantName, onSearch, searchOpen }: TimelineHeaderProps) => (
   <header className="flex h-[4.5rem] shrink-0 items-center gap-3 border-b px-4 sm:px-6">
     <Avatar className="size-10">
       <AvatarFallback className="bg-ice-deep text-xs font-semibold text-foreground">
@@ -26,7 +28,7 @@ const TimelineHeader = ({ participantName }: TimelineHeaderProps) => (
     </div>
 
     <nav className="flex items-center gap-1" aria-label="Ações da conversa">
-      <Button variant="ghost" size="icon" aria-label="Buscar na conversa" title="Buscar na conversa">
+      <Button variant="ghost" size="icon" aria-label="Buscar na conversa" title="Buscar na conversa" onClick={onSearch} aria-expanded={searchOpen}>
         <Search aria-hidden="true" />
       </Button>
       <Button variant="ghost" size="icon" aria-label="Informações da conversa" title="Informações da conversa">

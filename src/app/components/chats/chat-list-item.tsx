@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,13 @@ type ChatListItemProps = {
   isActive: boolean;
 };
 
-const ChatListItem = ({ chat, name, isActive }: ChatListItemProps) => (
+const ChatListItem = ({ chat, name, isActive }: ChatListItemProps) => {
+  const [params] = useSearchParams();
+  const query = params.get("q");
+  return (
   <li>
     <Button
-      render={<Link to={`/chats/${chat.id}`} />}
+      render={<Link to={{ pathname: `/chats/${chat.id}`, search: query ? `?${new URLSearchParams({ q: query })}` : "" }} />}
       nativeButton={false}
       variant="ghost"
       aria-current={isActive ? "page" : undefined}
@@ -36,6 +39,7 @@ const ChatListItem = ({ chat, name, isActive }: ChatListItemProps) => (
       </time>
     </Button>
   </li>
-);
+  );
+};
 
 export { ChatListItem };

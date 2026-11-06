@@ -37,6 +37,8 @@ type TimelineItemDto = {
 };
 
 type TimelinePaginationDto = {
+  hasOlder?: boolean;
+  hasNewer?: boolean;
   nextBeforeSequence?: number | null;
   nextAfterSequence?: number | null;
   hasNext: boolean;
@@ -45,6 +47,8 @@ type TimelinePaginationDto = {
 };
 
 type ListTimelineParams = {
+  query?: string;
+  aroundSequence?: number;
   order?: "sequence";
   beforeSequence?: number;
   afterSequence?: number;
