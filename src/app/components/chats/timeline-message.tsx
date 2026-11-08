@@ -1,14 +1,24 @@
 import { formatTimelineTime } from "@/lib/format-timeline-date";
 import { cn } from "@/lib/utils";
+import { getSearchHighlights } from "@/lib/search-highlights";
 import type { TimelineItemDto } from "@/types/chats/timeline-dto";
 import { TimelineImage } from "@/app/components/chats/timeline-image";
 
 type TimelineMessageProps = {
   item: TimelineItemDto;
   highlighted?: boolean;
+  searchQuery?: string;
 };
 
-const TimelineMessage = ({ item, highlighted }: TimelineMessageProps) => {
+const SearchHighlight = ({ text, query }: { text: string; query: string }) => {
+  const matches = getSearchHighlights(text, query);
+  return <>{matches.map(({ start, end }, index) => {
+    const before = text.slice(matches[index - 1]?.end ?? 0, start);
+    return <span key={start}>{before}<mark className="rounded-sm bg-yellow-300 text-black">{text.slice(start, end)}</mark></span>;
+  })}{text.slice(matches.at(-1)?.end ?? 0)}</>;
+};
+
+const TimelineMessage = ({ item, highlighted, searchQuery = "" }: TimelineMessageProps) => {
   const isMine = item.message.isMine;
 
   return (
@@ -32,9 +42,9 @@ const TimelineMessage = ({ item, highlighted }: TimelineMessageProps) => {
           {item.message.content.type === "IMAGE" ? (
             <>
               <TimelineImage key={item.message.content.imageId} imageId={item.message.content.imageId} caption={item.message.content.caption} />
-              {item.message.content.caption && <p className="mt-2 whitespace-pre-wrap break-words">{item.message.content.caption}</p>}
+              {item.message.content.caption && <p className="mt-2 whitespace-pre-wrap break-words"><SearchHighlight text={item.message.content.caption} query={searchQuery} /></p>}
             </>
-          ) : <p className="whitespace-pre-wrap break-words">{item.message.content.value}</p>}
+          ) : <p className="whitespace-pre-wrap break-words"><SearchHighlight text={item.message.content.value} query={searchQuery} /></p>}
           <time
             className="mt-1 block text-[0.65rem] text-muted-foreground"
             dateTime={item.createdAt}

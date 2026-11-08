@@ -2,9 +2,30 @@ import { afterEach, expect, test } from "bun:test";
 import { listChats } from "../src/services/chats/list-chats";
 import { listTimeline } from "../src/services/chats/list-timeline";
 import { resumeSession } from "../src/services/auth/session-lifecycle";
+import { getSearchHighlights } from "../src/lib/search-highlights";
 
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; resumeSession(); });
+
+test("destaques preservam acentos, Unicode decomposto e posições após emojis", () => {
+  const text = "🙂 Olá, OLA! AÇÃO e ac\u0327a\u0303o.";
+  const highlights = getSearchHighlights(text, "ola acao");
+  expect(highlights.map(({ start, end }) => text.slice(start, end))).toEqual(["Olá", "OLA", "AÇÃO", "ac\u0327a\u0303o"]);
+  expect(highlights[0].start).toBe(3);
+});
+
+test("destaques usam palavras completas, exigem todos os termos e separam pontuação", () => {
+  const text = "Contratos e contrato de ANA.SILVA@example.com";
+  expect(getSearchHighlights(text, "contrato ana.silva").map(({ start, end }) => text.slice(start, end))).toEqual(["contrato", "ANA", "SILVA"]);
+  expect(getSearchHighlights(text, "contra")).toEqual([]);
+  expect(getSearchHighlights(text, "contrato ausente")).toEqual([]);
+});
+
+test("busca vazia ou sem palavras não destaca mensagens", () => {
+  for (const query of ["", "   ", ".*+?[]"]) {
+    expect(getSearchHighlights("Olá!", query)).toEqual([]);
+  }
+});
 
 test("busca de conversas preserva termo, cursor e cancelamento", async () => {
   const controller = new AbortController();

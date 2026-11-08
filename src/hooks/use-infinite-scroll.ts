@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 type InfiniteScrollOptions = {
   hasNextPage: boolean;
@@ -7,10 +7,12 @@ type InfiniteScrollOptions = {
   itemCount: number;
   fetchNextPage: () => Promise<unknown>;
   direction?: "top" | "bottom";
+  scrollAreaRef?: RefObject<HTMLDivElement | null>;
 };
 
-const useInfiniteScroll = ({ hasNextPage, isFetchingNextPage, isFetchNextPageError, itemCount, fetchNextPage, direction = "bottom" }: InfiniteScrollOptions) => {
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+const useInfiniteScroll = ({ hasNextPage, isFetchingNextPage, isFetchNextPageError, itemCount, fetchNextPage, direction = "bottom", scrollAreaRef: providedScrollAreaRef }: InfiniteScrollOptions) => {
+  const fallbackScrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = providedScrollAreaRef ?? fallbackScrollAreaRef;
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ const useInfiniteScroll = ({ hasNextPage, isFetchingNextPage, isFetchNextPageErr
     }, { root: viewport, rootMargin: direction === "top" ? "160px 0px 0px 0px" : "0px 0px 160px 0px" });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, itemCount, fetchNextPage, direction]);
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, itemCount, fetchNextPage, direction, scrollAreaRef]);
 
   return { scrollAreaRef, sentinelRef };
 };

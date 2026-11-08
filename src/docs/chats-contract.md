@@ -25,6 +25,18 @@ A digitação mantém um rascunho local. A busca e a atualização dos parâmetr
 URL acontecem ao pressionar Enter. A pesquisa de mensagens possui apenas o botão
 de fechar; o campo não exibe outros botões de limpar.
 
+Ao pesquisar, a conversa abre automaticamente na ocorrência mais recente, sem
+exibir uma lista de resultados. As palavras encontradas ficam amarelas no texto
+das mensagens e nas legendas de imagens, respeitando palavras completas, acentos
+e maiúsculas conforme a busca. Uma nova pesquisa remove a âncora anterior; links
+com `message` preservam a mensagem selecionada. Fechar a busca remove os destaques
+e mantém a posição no histórico. “Ir às mais recentes” encerra a busca e retorna
+ao fim da conversa.
+
+O histórico aberto pela pesquisa carrega mensagens anteriores ao rolar para cima
+e posteriores ao rolar para baixo, automaticamente e preservando a posição de
+leitura. Em caso de falha na paginação, exibe a opção de tentar novamente.
+
 Os registros existentes precisam da migração `search-backfill` do backend antes
 de aparecerem nos resultados. Os contratos abaixo continuam válidos sem busca.
 

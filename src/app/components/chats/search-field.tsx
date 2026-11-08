@@ -14,6 +14,7 @@ const SearchField = ({ name, label, autoFocus, clearable = true }: SearchFieldPr
   const update = (nextValue: string) => setParams((current) => {
     const next = new URLSearchParams(current);
     if (nextValue) next.set(name, nextValue); else next.delete(name);
+    if (name === "messageQuery") next.delete("message");
     return next;
   }, { replace: true });
 

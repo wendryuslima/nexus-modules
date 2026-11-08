@@ -25,6 +25,7 @@ const useTimelineScroll = ({
   const [newMessages, setNewMessages] = useState(false);
 
   useEffect(() => {
+    if (initiallyScrolledChatIdRef.current !== chatId) initiallyScrolledChatIdRef.current = null;
     if (!isTimelineLoaded || initiallyScrolledChatIdRef.current === chatId) return;
 
     const frame = requestAnimationFrame(() => {

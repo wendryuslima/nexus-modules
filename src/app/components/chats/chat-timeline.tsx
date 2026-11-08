@@ -33,6 +33,7 @@ const ChatTimeline = ({
   const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [searchOpened, setSearchOpened] = useState(false);
+  const messageQuery = (params.get("messageQuery") ?? "").trim();
   const rawAnchor = params.get("message");
   const anchor = rawAnchor && /^\d+$/.test(rawAnchor) && Number.isSafeInteger(Number(rawAnchor)) && Number(rawAnchor) > 0 ? Number(rawAnchor) : undefined;
   const searchOpen = searchOpened || params.has("messageQuery");
@@ -41,8 +42,9 @@ const ChatTimeline = ({
   const timeline = anchor === undefined ? liveTimeline : context;
   const { data: latestNotifiedSequence } = useQuery({ queryKey: ["chats", "history-notification", chatId], initialData: 0, enabled: false, queryFn: () => 0 });
   const returnToLatest = () => {
+    setSearchOpened(false);
     void queryClient.resetQueries({ queryKey: chatsQueryKeys.timelineForChat(chatId) });
-    setParams((current) => { const next = new URLSearchParams(current); next.delete("message"); return next; });
+    setParams((current) => { const next = new URLSearchParams(current); next.delete("message"); next.delete("messageQuery"); return next; });
   };
   const closeSearch = () => {
     setSearchOpened(false);
@@ -64,12 +66,21 @@ const ChatTimeline = ({
     latestItemIsMine: latestItem?.message.isMine,
   });
   const { scrollAreaRef, sentinelRef } = useInfiniteScroll({
-    hasNextPage: anchor === undefined && timeline.hasNextPage,
-    isFetchingNextPage: timeline.isFetchingNextPage,
+    hasNextPage: Boolean(timeline.hasNextPage),
+    isFetchingNextPage: timeline.isFetching,
     isFetchNextPageError: timeline.isFetchNextPageError,
     itemCount: items.length,
     fetchNextPage: loadOlderMessages,
     direction: "top",
+  });
+  const { sentinelRef: newerSentinelRef } = useInfiniteScroll({
+    scrollAreaRef,
+    hasNextPage: anchor !== undefined && Boolean(context.hasPreviousPage),
+    isFetchingNextPage: context.isFetching,
+    isFetchNextPageError: context.isFetchPreviousPageError,
+    itemCount: items.length,
+    fetchNextPage: loadNewerMessages,
+    direction: "bottom",
   });
 
   return (
@@ -109,7 +120,7 @@ const ChatTimeline = ({
         )}
 
         {timeline.data && (
-          <div className="flex w-full flex-col gap-4 px-4 py-6 sm:px-8 sm:py-8">
+          <div className="relative flex w-full flex-col gap-4 px-4 py-6 sm:px-8 sm:py-8">
             {timeline.isRefetchError && (
               <div className="space-y-2">
                 <RequestErrorAlert message="Não foi possível atualizar as mensagens pelo servidor." />
@@ -118,12 +129,11 @@ const ChatTimeline = ({
                 </Button>
               </div>
             )}
-            {anchor === undefined && timeline.hasNextPage && !timeline.isFetchNextPageError && (
+            {timeline.hasNextPage && !timeline.isFetchNextPageError && (
               <div ref={sentinelRef} aria-hidden="true" className="h-px" />
             )}
-            {anchor !== undefined && context.hasNextPage && !context.isFetchNextPageError && <Button variant="ghost" size="sm" disabled={context.isFetching} onClick={loadOlderMessages}>Carregar mensagens anteriores</Button>}
             {timeline.isFetchingNextPage && (
-              <p role="status" className="text-center text-sm text-muted-foreground">
+              <p role="status" className="absolute inset-x-0 top-1 z-10 mx-auto w-fit rounded bg-background/90 px-2 py-1 text-center text-sm text-muted-foreground">
                 Carregando mensagens anteriores...
               </p>
             )}
@@ -161,11 +171,12 @@ const ChatTimeline = ({
                   {currentDay !== previousDay && (
                     <TimelineDayDivider label={formatTimelineDate(item.createdAt)} />
                   )}
-                  <TimelineMessage item={item} highlighted={item.sequence === anchor} />
+                  <TimelineMessage item={item} highlighted={!messageQuery && item.sequence === anchor} searchQuery={messageQuery} />
                 </div>
               );
             })}
-            {anchor !== undefined && context.hasPreviousPage && !context.isFetchPreviousPageError && <Button variant="ghost" size="sm" disabled={context.isFetching} onClick={loadNewerMessages}>{context.isFetchingPreviousPage ? "Carregando..." : "Carregar mensagens posteriores"}</Button>}
+            {anchor !== undefined && context.hasPreviousPage && !context.isFetchPreviousPageError && <div ref={newerSentinelRef} aria-hidden="true" className="h-px" />}
+            {anchor !== undefined && context.isFetchingPreviousPage && <p role="status" className="text-center text-sm text-muted-foreground">Carregando mensagens posteriores...</p>}
             {anchor !== undefined && context.isFetchPreviousPageError && <div className="space-y-2"><RequestErrorAlert message={context.error?.message ?? "Não foi possível carregar as mensagens posteriores."} /><Button variant="outline" size="sm" disabled={context.isFetching} onClick={loadNewerMessages}>Tentar novamente</Button></div>}
           </div>
         )}
