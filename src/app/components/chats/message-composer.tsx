@@ -1,4 +1,6 @@
-import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { MessageReplyPreview } from "@/app/components/chats/message-reply-preview";
+import type { TimelineItemDto } from "@/types/chats/timeline-dto";
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ImagePlus, Send, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,9 +13,12 @@ import { ImageAttachmentPreview } from "@/app/components/chats/image-attachment-
 type MessageComposerProps = {
   chatId: string;
   participantName: string;
+  replyTo?: TimelineItemDto;
+  onCancelReply: () => void;
+  onReplySent: (id: string) => void;
 };
 
-const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
+const MessageComposer = ({ chatId, participantName, replyTo, onCancelReply, onReplySent }: MessageComposerProps) => {
   const descriptionId = useId();
   const [message, setMessage] = useState("");
   const [image, setImage] = useState<TimelineMessageDraft["image"]>();
@@ -23,6 +28,10 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
   const sendMessage = useSendTimelineMessage(chatId);
   const canSend = (message.trim().length > 0 || Boolean(image)) && !sendMessage.isPending;
 
+  useEffect(() => {
+    if (replyTo) inputRef.current?.focus({ preventScroll: true });
+  }, [replyTo]);
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const content = message.trim();
@@ -30,9 +39,9 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
 
     const previous = retryPayload.current;
     const payload: TimelineMessageDraft =
-      previous?.text === content && previous.image === image
+      previous?.text === content && previous.image === image && previous.replyID === replyTo?.id
         ? previous
-        : { clientMessageId: crypto.randomUUID(), text: content, image };
+        : { clientMessageId: crypto.randomUUID(), text: content, image, replyID: replyTo?.id };
     retryPayload.current = payload;
 
     inputRef.current?.focus({ preventScroll: true });
@@ -42,6 +51,7 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
       {
         onSuccess: () => {
           retryPayload.current = null;
+          if (payload.replyID) onReplySent(payload.replyID);
           setMessage((current) => current.trim() === content ? "" : current);
           setImage((current) => current === image ? undefined : current);
           if (fileRef.current) fileRef.current.value = "";
@@ -60,6 +70,11 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Escape" && replyTo && !sendMessage.isPending) {
+      event.preventDefault();
+      onCancelReply();
+      return;
+    }
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
 
     event.preventDefault();
@@ -72,6 +87,13 @@ const MessageComposer = ({ chatId, participantName }: MessageComposerProps) => {
         className="w-full rounded-3xl border bg-card transition-shadow focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20"
         onSubmit={handleSubmit}
       >
+        {replyTo && <div className="flex items-center gap-3 border-b p-3" role="status">
+          <div className="min-w-0 flex-1">
+            <p className="mb-1 text-xs text-muted-foreground">Respondendo a</p>
+            <MessageReplyPreview authorName={replyTo.message.isMine ? "Você" : participantName} content={replyTo.message.content} />
+          </div>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Cancelar resposta" disabled={sendMessage.isPending} onClick={() => { onCancelReply(); inputRef.current?.focus({ preventScroll: true }); }}><X aria-hidden="true" /></Button>
+        </div>}
         {image && <div className="flex items-center gap-3 border-b p-3">
           <ImageAttachmentPreview file={image.file} />
           <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{image.file.name}</span>

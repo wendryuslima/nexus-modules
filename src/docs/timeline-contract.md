@@ -107,3 +107,19 @@ Os itens ficam na coleção MongoDB `timeline_items`. Um documento de mensagem u
 ```
 
 A leitura usa o índice `timeline_chat_created` em `chat_id`, `created_at` decrescente e `_id` decrescente.
+# Respostas a mensagens
+
+O botão **Responder mensagem** está disponível em mensagens enviadas e recebidas,
+no hover, foco de teclado e em dispositivos sem hover. A seleção aparece no
+compositor; pode ser cancelada pelo botão ou por Escape. O envio aceita texto ou
+imagem e inclui `replyID`, usando o ID persistido da mensagem original.
+
+A seleção é mantida em caso de falha e limpa após sucesso. Retries do mesmo
+conteúdo e referência reutilizam `clientMessageId`; mudar a referência gera uma
+nova identidade. Uploads usam essa identidade para não reaproveitar uma imagem já
+vinculada a outro envio após uma resposta HTTP perdida.
+
+HTTP e WebSocket incluem `replyID` e `replyTo: { senderId, sequence, content }`.
+A citação usa o contexto retornado pelo servidor, mesmo quando a original está
+fora das páginas carregadas. Não há consultas adicionais por citação nem mudanças
+na paginação. O contexto contém somente a mensagem original, sem respostas aninhadas.

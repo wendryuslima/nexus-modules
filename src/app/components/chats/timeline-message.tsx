@@ -1,3 +1,7 @@
+import { Reply } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { MessageReplyPreview } from "@/app/components/chats/message-reply-preview";
 import { formatTimelineTime } from "@/lib/format-timeline-date";
 import { cn } from "@/lib/utils";
 import { getSearchHighlights } from "@/lib/search-highlights";
@@ -6,6 +10,9 @@ import { TimelineImage } from "@/app/components/chats/timeline-image";
 
 type TimelineMessageProps = {
   item: TimelineItemDto;
+  onReply: (item: TimelineItemDto) => void;
+  participantName: string;
+  currentUserId?: string;
   highlighted?: boolean;
   searchQuery?: string;
 };
@@ -14,30 +21,33 @@ const SearchHighlight = ({ text, query }: { text: string; query: string }) => {
   const matches = getSearchHighlights(text, query);
   return <>{matches.map(({ start, end }, index) => {
     const before = text.slice(matches[index - 1]?.end ?? 0, start);
-    return <span key={start}>{before}<mark className="rounded-sm bg-yellow-300 text-black">{text.slice(start, end)}</mark></span>;
+    return <span key={start}>{before}<mark className="rounded-sm bg-accent text-accent-foreground">{text.slice(start, end)}</mark></span>;
   })}{text.slice(matches.at(-1)?.end ?? 0)}</>;
 };
 
-const TimelineMessage = ({ item, highlighted, searchQuery = "" }: TimelineMessageProps) => {
+const TimelineMessage = ({ item, onReply, participantName, currentUserId, highlighted, searchQuery = "" }: TimelineMessageProps) => {
   const isMine = item.message.isMine;
 
   return (
     <article
       data-sequence={item.sequence}
-      className={cn("flex w-full scroll-m-6 rounded-md", isMine ? "justify-end" : "justify-start", highlighted && "bg-primary/10 ring-2 ring-primary/60")}
+      className={cn("group flex w-full items-start gap-1 scroll-m-6 rounded-md", isMine ? "justify-end" : "justify-start", highlighted && "bg-primary/10 ring-2 ring-primary/60")}
       aria-label={isMine ? "Mensagem enviada" : "Mensagem recebida"}
     >
-      <div className="flex max-w-[min(85%,42rem)] flex-col items-start">
+      <div className="flex min-w-0 max-w-[min(85%,42rem)] flex-col items-start">
         <div
           className={cn(
             "min-w-0 rounded-md px-3 py-2 text-sm leading-relaxed",
             isMine ? "bg-secondary text-foreground" : "bg-muted text-foreground",
           )}
         >
-          {item.message.replyTo && (
-            <blockquote className="mb-2 border-l-2 border-primary pl-2 text-xs text-muted-foreground">
-              <span className="block break-words">{item.message.replyTo.content}</span>
-            </blockquote>
+          {item.message.replyID && (
+            <div className="mb-2">
+              <MessageReplyPreview
+                authorName={item.message.replyTo ? item.message.replyTo.senderId === currentUserId ? "Você" : participantName : "Mensagem original"}
+                content={item.message.replyTo?.content}
+              />
+            </div>
           )}
           {item.message.content.type === "IMAGE" ? (
             <>
@@ -74,6 +84,12 @@ const TimelineMessage = ({ item, highlighted, searchQuery = "" }: TimelineMessag
           </ul>
         )}
       </div>
+      <Tooltip>
+        <TooltipTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Responder mensagem" className={cn("shrink-0 text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100", isMine && "-order-1")} onClick={() => onReply(item)} />} >
+          <Reply aria-hidden="true" className="size-4" />
+        </TooltipTrigger>
+        <TooltipContent>Responder</TooltipContent>
+      </Tooltip>
     </article>
   );
 };

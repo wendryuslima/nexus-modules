@@ -17,6 +17,14 @@ const validContent = (content: unknown): boolean => {
     (content.caption === undefined || (typeof content.caption === "string" && [...content.caption].length <= 4000));
 };
 
+const validReply = (data: Record<string, unknown>): boolean => {
+  if (data.replyID === undefined) return data.replyTo === undefined;
+  const reply = data.replyTo;
+  return text(data.replyID) && record(reply) && text(reply.senderId) &&
+    Number.isSafeInteger(reply.sequence) && (reply.sequence as number) > 0 &&
+    (reply.sequence as number) < (data.sequence as number) && validContent(reply.content);
+};
+
 const parseRealtimeEvent = (raw: string): RealtimeEvent | null => {
   const event: unknown = JSON.parse(raw);
   if (!record(event)) throw new Error("Evento inválido.");
@@ -27,7 +35,7 @@ const parseRealtimeEvent = (raw: string): RealtimeEvent | null => {
   if (event.type === "connection.ready") {
     if (!text(data.connectionId) || !text(data.userId) || !date(data.accessExpiresAt)) throw new Error("Prontidão inválida.");
   } else if (!text(event.eventId) || !date(event.occurredAt) || !text(data.id) || !text(data.chatId) || !text(data.senderId) || !date(data.createdAt) ||
-    !Number.isSafeInteger(data.sequence) || (data.sequence as number) < 1 || !validContent(data.content) ||
+    !Number.isSafeInteger(data.sequence) || (data.sequence as number) < 1 || !validContent(data.content) || !validReply(data) ||
     (data.clientMessageId !== undefined && (typeof data.clientMessageId !== "string" || !clientKey.test(data.clientMessageId)))) {
     throw new Error("Mensagem recebida inválida.");
   }

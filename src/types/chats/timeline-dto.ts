@@ -1,4 +1,4 @@
-import type { MessageContentDto, TextContentDto } from "@/types/chats/message-dto";
+import type { MessageContentDto, MessageReplyDto, TextContentDto } from "@/types/chats/message-dto";
 
 type TimelineCursorDto = {
   id: string;
@@ -7,10 +7,7 @@ type TimelineCursorDto = {
 
 type TimelineTextContentDto = TextContentDto;
 
-type TimelineReplyDto = {
-  authorName: string;
-  content: string;
-};
+type TimelineReplyDto = MessageReplyDto;
 
 type TimelineReactionDto = {
   emoji: string;
@@ -23,6 +20,7 @@ type TimelineMessageDto = {
   senderId: string;
   isMine: boolean;
   content: MessageContentDto;
+  replyID?: string;
   replyTo?: TimelineReplyDto;
   reactions?: TimelineReactionDto[];
 };

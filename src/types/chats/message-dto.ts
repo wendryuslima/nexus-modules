@@ -11,12 +11,21 @@ type ImageContentDto = {
 
 type MessageContentDto = TextContentDto | ImageContentDto;
 
+type MessageReplyDto = {
+  senderId: string;
+  sequence: number;
+  content: MessageContentDto;
+};
+
 type CreateMessageRequestDto = {
+  replyID?: string;
   clientMessageId: string;
   content: MessageContentDto;
 };
 
 type MessageDto = {
+  replyID?: string;
+  replyTo?: MessageReplyDto;
   id: string;
   clientMessageId: string;
   chatId: string;
@@ -29,4 +38,4 @@ type MessageDto = {
 
 type CreateMessageResponseDto = { data: MessageDto };
 
-export type { CreateMessageRequestDto, CreateMessageResponseDto, MessageDto, MessageContentDto, TextContentDto, ImageContentDto };
+export type { MessageReplyDto, CreateMessageRequestDto, CreateMessageResponseDto, MessageDto, MessageContentDto, TextContentDto, ImageContentDto };

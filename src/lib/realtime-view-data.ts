@@ -50,6 +50,7 @@ const appendRealtimeMessage = (data: TimelineViewData, event: MessageCreatedEven
       message: {
         clientMessageId: message.clientMessageId, senderId: message.senderId,
         isMine: message.senderId === userId, content: message.content,
+        replyID: message.replyID, replyTo: message.replyTo,
       },
     }]),
   };

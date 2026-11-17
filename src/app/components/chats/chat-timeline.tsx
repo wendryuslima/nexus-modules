@@ -1,3 +1,5 @@
+import type { TimelineItemDto } from "@/types/chats/timeline-dto";
+import { useAuthSession } from "@/hooks/auth/use-auth-session";
 import { MessageCircle, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -30,6 +32,8 @@ const ChatTimeline = ({
   chatId,
   participantName = "Participante",
 }: ChatTimelineProps) => {
+  const [replyTo, setReplyTo] = useState<TimelineItemDto>();
+  const session = useAuthSession();
   const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [searchOpened, setSearchOpened] = useState(false);
@@ -171,7 +175,7 @@ const ChatTimeline = ({
                   {currentDay !== previousDay && (
                     <TimelineDayDivider label={formatTimelineDate(item.createdAt)} />
                   )}
-                  <TimelineMessage item={item} highlighted={!messageQuery && item.sequence === anchor} searchQuery={messageQuery} />
+                  <TimelineMessage item={item} onReply={setReplyTo} participantName={participantName} currentUserId={session.data?.user?.id} highlighted={!messageQuery && item.sequence === anchor} searchQuery={messageQuery} />
                 </div>
               );
             })}
@@ -183,7 +187,7 @@ const ChatTimeline = ({
       </ScrollArea>
 
       {anchor === undefined && newMessages && <Button variant="secondary" className="mx-auto my-2" onClick={scrollToLatest}>Novas mensagens ↓</Button>}
-      <MessageComposer key={chatId} chatId={chatId} participantName={participantName} />
+      <MessageComposer key={chatId} chatId={chatId} participantName={participantName} replyTo={replyTo} onCancelReply={() => setReplyTo(undefined)} onReplySent={(id) => setReplyTo((current) => current?.id === id ? undefined : current)} />
     </section>
   );
 };
