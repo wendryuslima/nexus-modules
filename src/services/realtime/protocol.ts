@@ -1,8 +1,10 @@
+import type { ChatReadState } from "@/types/chats/chat-read-state";
 import type { MessageDto } from "@/types/chats/message-dto";
 
 type ReadyEvent = { version: 1; type: "connection.ready"; data: { connectionId: string; userId: string; accessExpiresAt: string } };
-type MessageCreatedEvent = { version: 1; type: "message.created"; eventId: string; occurredAt: string; data: Omit<MessageDto, "deliveryStatus" | "clientMessageId"> & { clientMessageId?: string } };
-type RealtimeEvent = ReadyEvent | MessageCreatedEvent;
+type MessageCreatedEvent = { version: 1; type: "message.created"; eventId: string; occurredAt: string; data: Omit<MessageDto, "deliveryStatus" | "clientMessageId"> & { clientMessageId?: string; chatState?: ChatReadState } };
+type ChatReadEvent = { version: 1; type: "chat.read"; data: ChatReadState };
+type RealtimeEvent = ReadyEvent | MessageCreatedEvent | ChatReadEvent;
 
 class IncompatibleProtocolError extends Error {}
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -25,17 +27,27 @@ const validReply = (data: Record<string, unknown>): boolean => {
     (reply.sequence as number) < (data.sequence as number) && validContent(reply.content);
 };
 
+const validChatState = (state: unknown): state is ChatReadState => record(state) && text(state.chatId) &&
+  Number.isSafeInteger(state.unreadCount) && Number.isSafeInteger(state.lastReadSequence) && Number.isSafeInteger(state.lastSequence) &&
+  (state.unreadCount as number) >= 0 && (state.lastReadSequence as number) >= 0 && (state.lastSequence as number) >= (state.lastReadSequence as number) &&
+  (state.unreadCount as number) <= (state.lastSequence as number) - (state.lastReadSequence as number);
+
 const parseRealtimeEvent = (raw: string): RealtimeEvent | null => {
   const event: unknown = JSON.parse(raw);
   if (!record(event)) throw new Error("Evento inválido.");
   if (event.version !== 1) throw new IncompatibleProtocolError("Atualize a aplicação para continuar recebendo mensagens em tempo real.");
-  if (event.type !== "connection.ready" && event.type !== "message.created") return null;
+  if (event.type !== "connection.ready" && event.type !== "message.created" && event.type !== "chat.read") return null;
   if (!record(event.data)) throw new Error("Dados do evento inválidos.");
   const data = event.data;
+  if (event.type === "chat.read") {
+    if (!validChatState(data)) throw new Error("Contagem de mensagens inválida.");
+    return event as ChatReadEvent;
+  }
   if (event.type === "connection.ready") {
     if (!text(data.connectionId) || !text(data.userId) || !date(data.accessExpiresAt)) throw new Error("Prontidão inválida.");
   } else if (!text(event.eventId) || !date(event.occurredAt) || !text(data.id) || !text(data.chatId) || !text(data.senderId) || !date(data.createdAt) ||
     !Number.isSafeInteger(data.sequence) || (data.sequence as number) < 1 || !validContent(data.content) || !validReply(data) ||
+    (data.chatState !== undefined && (!validChatState(data.chatState) || data.chatState.chatId !== data.chatId || data.chatState.lastSequence < (data.sequence as number))) ||
     (data.clientMessageId !== undefined && (typeof data.clientMessageId !== "string" || !clientKey.test(data.clientMessageId)))) {
     throw new Error("Mensagem recebida inválida.");
   }

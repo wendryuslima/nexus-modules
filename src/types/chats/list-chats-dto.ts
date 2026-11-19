@@ -1,4 +1,6 @@
 type ChatDto = {
+  unreadCount: number;
+  lastReadSequence: number;
   lastSequence: number;
   id: string;
   relatedUser: string;

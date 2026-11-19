@@ -14,6 +14,8 @@ import { TimelineMessage } from "@/app/components/chats/timeline-message";
 import { TimelineSkeleton } from "@/app/components/chats/timeline-skeleton";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMarkChatRead } from "@/hooks/chats/use-mark-chat-read";
+import { timelineThroughSequence } from "@/lib/realtime-view-data";
 import { useTimeline } from "@/hooks/chats/use-timeline";
 import { useTimelineContext } from "@/hooks/chats/use-timeline-context";
 import { chatsQueryKeys } from "@/hooks/chats/chats-query-keys";
@@ -42,6 +44,7 @@ const ChatTimeline = ({
   const anchor = rawAnchor && /^\d+$/.test(rawAnchor) && Number.isSafeInteger(Number(rawAnchor)) && Number(rawAnchor) > 0 ? Number(rawAnchor) : undefined;
   const searchOpen = searchOpened || params.has("messageQuery");
   const liveTimeline = useTimeline(chatId, anchor === undefined);
+  useMarkChatRead(chatId, anchor === undefined && liveTimeline.data ? timelineThroughSequence(liveTimeline.data) : undefined);
   const context = useTimelineContext(chatId, anchor);
   const timeline = anchor === undefined ? liveTimeline : context;
   const { data: latestNotifiedSequence } = useQuery({ queryKey: ["chats", "history-notification", chatId], initialData: 0, enabled: false, queryFn: () => 0 });

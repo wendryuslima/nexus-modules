@@ -1,5 +1,23 @@
 # Contrato HTTP — Chats
 
+## Contador de mensagens não lidas
+
+Cada chat inclui `unreadCount`, `lastReadSequence` e `lastSequence`. O contador é
+individual e inclui apenas mensagens recebidas. O badge é ocultado em zero;
+acima de 99 mostra `99+`, mantendo a quantidade completa no nome acessível.
+
+Após carregar a timeline recente em uma aba visível, o cliente envia
+`POST /v1/chats/:chatId/read` com `{"throughSequence":123}`. A resposta contém
+`data: {chatId, unreadCount, lastReadSequence, lastSequence}`. Somente sequências
+contíguas carregadas são reconhecidas; abrir uma ocorrência histórica não marca
+as mensagens recentes. Falhas transitórias são repetidas e a navegação cancela
+a requisição pendente.
+
+`message.created.data.chatState` traz o contador confirmado para o usuário da
+conexão. `chat.read` traz o mesmo estado em `data`, sincronizando as abas. Ambos
+atualizam lista, pesquisa e detalhe. Valores absolutos e marcas de sequência
+evitam duplicações e protegem contra eventos ou respostas HTTP atrasados.
+
 ## Pesquisa e links diretos
 
 `GET /v1/chats?q=ana+silva` pesquisa palavras completas do e-mail do outro

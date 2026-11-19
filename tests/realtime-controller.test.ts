@@ -103,6 +103,31 @@ const fixture = (initial?: TimelineData) => {
 };
 const initial: TimelineData = { pages: [page([182])], pageParams: [{ pageSize: 50, order: "sequence" }] };
 
+test("chat.read antes da carga HTTP preserva leitura e ignora notificação antiga", async () => {
+  globalThis.fetch = (async (input) => new URL(String(input)).pathname === "/v1/auth/session" ? auth() : Response.json(page([182]))) as typeof fetch;
+  const { client, controller } = fixture(initial);
+  controller.start();
+  await until(() => TestWebSocket.instances.length === 1);
+  const socket = TestWebSocket.instances[0]; socket.frame(ready);
+  const listKey = ["chats", "list", 30];
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const pending = client.fetchQuery({ queryKey: listKey, queryFn: async () => {
+    await gate;
+    return {
+      pages: [{ data: [{ id: "chat-1", relatedUser: "user-2", relatedUserEmail: "other@example.com", unreadCount: 2, lastReadSequence: 0, lastSequence: 2, createdAt: "2026-10-27T12:00:00Z", updatedAt: "2026-10-27T12:00:00Z", summarySortAt: "2026-10-27T12:00:00Z" }], pagination: { page: 1, pageSize: 30, hasNext: false, nextCursor: null } }],
+      pageParams: [{ page: 1, pageSize: 30 }],
+    };
+  } });
+  socket.frame({ version: 1, type: "chat.read", data: { chatId: "chat-1", unreadCount: 0, lastReadSequence: 2, lastSequence: 2 } });
+  release(); await pending;
+  const { visibleChats } = await import("../src/lib/realtime-view-data");
+  const count = () => visibleChats(client.getQueryData<import("../src/lib/realtime-view-data").ChatsViewData>(listKey)!)[0].unreadCount;
+  expect(count()).toBe(0);
+  socket.frame({ version: 1, type: "chat.read", data: { chatId: "chat-1", unreadCount: 2, lastReadSequence: 0, lastSequence: 2 } });
+  expect(count()).toBe(0);
+});
+
 test("eventos atualizam a timeline sem GET ou faixa de sincronização por mensagem", async () => {
   let requests = 0;
   let release = () => {};

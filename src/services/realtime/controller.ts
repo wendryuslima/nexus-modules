@@ -1,3 +1,5 @@
+import type { ChatReadState } from "@/types/chats/chat-read-state";
+import { applyChatReadState, newerReadState } from "@/lib/chat-read-state";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { chatsQueryKeys } from "@/hooks/chats/chats-query-keys";
 import { invalidateBackendQuery } from "@/lib/invalidate-backend-query";
@@ -31,6 +33,7 @@ class RealtimeController {
   private unsubscribe?: () => void;
   private earlyEvents = new Map<string, MessageCreatedEvent>();
   private earlyBytes = 0;
+  private readStates = new Map<string, ChatReadState>();
 
   private client: QueryClient;
   private userId: string;
@@ -51,6 +54,7 @@ class RealtimeController {
     this.active = true;
     this.unsubscribe = this.client.getQueryCache().subscribe((event) => {
       if (event.type !== "updated" || event.action.type !== "success" || event.action.manual || !this.current() || !this.ready) return;
+      for (const state of this.readStates.values()) applyChatReadState(this.client, state);
       for (const [id, buffered] of this.earlyEvents) {
         if (!this.applyEvent(buffered)) {
           this.earlyEvents.delete(id);
@@ -77,7 +81,7 @@ class RealtimeController {
     document.removeEventListener("visibilitychange", this.onVisible);
     this.socket?.close(1000, "session stopped");
     this.pending.clear(); this.running.clear(); this.failedSync.clear();
-    this.unsubscribe?.(); this.earlyEvents.clear(); this.earlyBytes = 0;
+    this.unsubscribe?.(); this.earlyEvents.clear(); this.earlyBytes = 0; this.readStates.clear();
   }
 
   private current(epoch = this.epoch) {
@@ -137,7 +141,9 @@ class RealtimeController {
             this.status("connected"); this.synchronizeAll(true);
           } else {
             if (!this.ready) throw new Error("Mensagem recebida antes da prontidão.");
-            this.receive(event);
+            if (event.type === "chat.read") {
+              this.receiveReadState(event.data);
+            } else this.receive(event);
           }
         } catch (error) {
           const incompatible = error instanceof IncompatibleProtocolError;
@@ -187,6 +193,15 @@ class RealtimeController {
     }
   }
 
+  private receiveReadState(state: ChatReadState) {
+    const previous = this.readStates.get(state.chatId);
+    if (previous && !newerReadState(state, previous)) return;
+    this.readStates.delete(state.chatId);
+    this.readStates.set(state.chatId, state);
+    if (this.readStates.size > 100) this.readStates.delete(this.readStates.keys().next().value!);
+    applyChatReadState(this.client, state);
+  }
+
   private receive(event: MessageCreatedEvent) {
     const queries = this.client.getQueryCache().findAll({ queryKey: chatsQueryKeys.timelineForChat(event.data.chatId) });
     logRealtime("info", "message.created recebido; atualizando tela pelo WebSocket.", {
@@ -201,6 +216,7 @@ class RealtimeController {
 
   private applyEvent(event: MessageCreatedEvent): boolean {
     let waiting = false;
+    if (event.data.chatState) this.receiveReadState(event.data.chatState);
     const historyKey = ["chats", "history-notification", event.data.chatId];
     if (this.client.getQueryData<number>(historyKey) !== undefined) {
       this.client.setQueryData<number>(historyKey, (previous = 0) => Math.max(previous, event.data.sequence));

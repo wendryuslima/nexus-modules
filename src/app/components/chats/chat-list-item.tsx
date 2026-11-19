@@ -34,9 +34,16 @@ const ChatListItem = ({ chat, name, isActive }: ChatListItemProps) => {
         </AvatarFallback>
       </Avatar>
       <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+      <span className="flex shrink-0 flex-col items-end gap-1">
       <time dateTime={chat.summarySortAt} title={new Date(chat.summarySortAt).toLocaleString("pt-BR")} className="self-start pt-0.5 text-[0.65rem] font-normal text-muted-foreground">
         {formatChatDate(chat.summarySortAt)}
       </time>
+      {chat.unreadCount > 0 && (
+        <span aria-label={`${chat.unreadCount} ${chat.unreadCount === 1 ? "mensagem não lida" : "mensagens não lidas"}`} className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-semibold tabular-nums text-primary-foreground">
+          {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+        </span>
+      )}
+      </span>
     </Button>
   </li>
   );

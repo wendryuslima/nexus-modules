@@ -26,7 +26,7 @@ const ChatsPage = () => {
   const chats = useChats(query);
   const { chatId } = useParams<{ chatId: string }>();
 
-  const loadedChats = chats.data ? (query ? chats.data.pages.flatMap((page) => page.data) : visibleChats(chats.data)) : [];
+  const loadedChats = chats.data ? visibleChats(chats.data, !query) : [];
   const { scrollAreaRef, sentinelRef } = useInfiniteScroll({
     hasNextPage: Boolean(chats.hasNextPage),
     isFetchingNextPage: chats.isFetchingNextPage,

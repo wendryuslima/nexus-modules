@@ -24,7 +24,7 @@ const useChats = (query = "") => {
       };
     },
     retry: false,
-    structuralSharing: query ? true : preserveLiveChats,
+    structuralSharing: preserveLiveChats,
     gcTime: query ? 60_000 : 0,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

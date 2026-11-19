@@ -7,9 +7,13 @@ type TimelineViewData = InfiniteData<ListTimelineResponseDto, ListTimelineParams
   liveMessages?: TimelineItemDto[];
 };
 
+import type { ChatReadState } from "@/types/chats/chat-read-state";
+import { newerReadState, updateChatReadState } from "@/lib/chat-read-state";
+
 type ChatUpdate = { sequence: number; createdAt: string };
 type ChatsViewData = InfiniteData<ListChatsResponseDto, ListChatsParams> & {
   liveUpdates?: Record<string, ChatUpdate>;
+  readStates?: Record<string, ChatReadState>;
 };
 
 const uniqueMessages = (items: readonly TimelineItemDto[]) => {
@@ -76,25 +80,36 @@ const preserveLiveChats = (oldData: unknown, newData: unknown): ChatsViewData =>
       if (update && chat.lastSequence >= update.sequence && Date.parse(chat.summarySortAt) >= Date.parse(update.createdAt)) delete updates[chat.id];
     }
   }
-  return { ...incoming, liveUpdates: updates };
+  const readStates = { ...previous?.readStates };
+  for (const [id, state] of Object.entries(incoming.readStates ?? {})) {
+    if (!readStates[id] || newerReadState(state, readStates[id])) readStates[id] = state;
+  }
+  for (const page of incoming.pages) for (const chat of page.data) {
+    const state = readStates[chat.id];
+    if (state && chat.lastSequence >= state.lastSequence && (chat.lastReadSequence ?? 0) >= state.lastReadSequence) delete readStates[chat.id];
+  }
+  return { ...incoming, liveUpdates: updates, readStates };
 };
 
-const visibleChats = (data: ChatsViewData): ChatDto[] => {
+const visibleChats = (data: ChatsViewData, sort = true): ChatDto[] => {
   const chats = new Map<string, ChatDto>();
   for (const page of data.pages) {
     for (const chat of page.data) {
       const update = data.liveUpdates?.[chat.id];
+      const state = data.readStates?.[chat.id];
+      const current = state && newerReadState(state, chat) ? { ...chat, ...state } : chat;
       chats.set(chat.id, update ? {
-        ...chat, lastSequence: Math.max(chat.lastSequence, update.sequence),
+        ...current, lastSequence: Math.max(current.lastSequence, update.sequence),
         summarySortAt: later(chat.summarySortAt, update.createdAt),
-      } : chat);
+      } : current);
     }
   }
-  return [...chats.values()].sort(compareChats);
+  return sort ? [...chats.values()].sort(compareChats) : [...chats.values()];
 };
 
 const updateRealtimeChat = (data: ChatsViewData, event: MessageCreatedEvent): ChatsViewData => {
   const message = event.data;
+  if (message.chatState) data = updateChatReadState(data, message.chatState);
   const chat = visibleChats(data).find((item) => item.id === message.chatId);
   if (!chat || (chat.lastSequence >= message.sequence && Date.parse(chat.summarySortAt) >= Date.parse(message.createdAt))) return data;
   return {

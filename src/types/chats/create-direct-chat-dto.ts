@@ -5,7 +5,7 @@ type CreateDirectChatRequestDto = {
 };
 
 type CreateDirectChatResponseDto = {
-  data: Omit<ChatDto, "lastSequence" | "relatedUserEmail">;
+  data: Omit<ChatDto, "relatedUserEmail">;
 };
 
 export type { CreateDirectChatRequestDto, CreateDirectChatResponseDto };
