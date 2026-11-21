@@ -1,4 +1,6 @@
 import type { ChatReadState } from "@/types/chats/chat-read-state";
+import type { UserPresence, PresenceChangedEvent, PresenceSnapshotEvent } from "@/types/users/user-presence";
+import { presenceQueryKeys } from "@/hooks/users/presence-query-keys";
 import { applyChatReadState, newerReadState } from "@/lib/chat-read-state";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { chatsQueryKeys } from "@/hooks/chats/chats-query-keys";
@@ -52,6 +54,7 @@ class RealtimeController {
 
   start() {
     this.active = true;
+    this.resetPresence();
     this.unsubscribe = this.client.getQueryCache().subscribe((event) => {
       if (event.type !== "updated" || event.action.type !== "success" || event.action.manual || !this.current() || !this.ready) return;
       for (const state of this.readStates.values()) applyChatReadState(this.client, state);
@@ -74,6 +77,7 @@ class RealtimeController {
   stop() {
     if (!this.active) return;
     this.active = false; this.epoch++; this.ready = false;
+    this.resetPresence();
     logRealtime("info", "Encerrando conexão e cancelando atualizações agendadas.");
     clearTimeout(this.reconnect); clearTimeout(this.readyTimeout); clearTimeout(this.syncRetry); clearTimeout(this.listRefresh); clearInterval(this.periodic);
     window.removeEventListener("online", this.onOnline);
@@ -98,6 +102,7 @@ class RealtimeController {
     clearTimeout(this.readyTimeout);
     this.socket?.close(1000, "reconnecting"); this.socket = undefined;
     this.ready = false;
+    this.resetPresence();
     this.pending.clear(); this.running.clear(); this.failedSync.clear();
     this.status(this.attempt ? "reconnecting" : "connecting");
     try {
@@ -143,6 +148,8 @@ class RealtimeController {
             if (!this.ready) throw new Error("Mensagem recebida antes da prontidão.");
             if (event.type === "chat.read") {
               this.receiveReadState(event.data);
+            } else if (event.type === "presence.snapshot" || event.type === "presence.changed") {
+              this.receivePresence(event);
             } else this.receive(event);
           }
         } catch (error) {
@@ -155,6 +162,7 @@ class RealtimeController {
         if (!this.current(epoch)) return;
         logRealtime("warn", "Conexão fechada.", { code, wasClean: Boolean(wasClean) });
         this.ready = false; this.epoch++; clearTimeout(this.readyTimeout);
+        this.resetPresence();
         this.pending.clear(); this.running.clear(); this.failedSync.clear();
         this.earlyEvents.clear(); this.earlyBytes = 0;
         if (code === 4003) { this.stop(); finishSession(); return; }
@@ -181,7 +189,7 @@ class RealtimeController {
   }
 
   private onOnline = () => { if (!this.ready) { clearTimeout(this.reconnect); void this.connect(); } else this.synchronizeAll(); };
-  private onOffline = () => { this.status("offline"); this.socket?.close(1000, "offline"); };
+  private onOffline = () => { this.resetPresence(); this.status("offline"); this.socket?.close(1000, "offline"); };
   private onVisible = () => { if (document.visibilityState === "visible") this.synchronizeAll(); };
 
   private synchronizeAll(recovery = false) {
@@ -191,6 +199,24 @@ class RealtimeController {
     for (const query of this.client.getQueryCache().findAll({ queryKey: chatsQueryKeys.timelines() })) {
       this.requestRefresh(query.queryKey);
     }
+  }
+
+  private resetPresence() {
+    this.client.setQueryData<UserPresence>(presenceQueryKeys.session(this.userId), { onlineUserIds: [], ready: false });
+  }
+
+  private receivePresence(event: PresenceSnapshotEvent | PresenceChangedEvent) {
+    this.client.setQueryData<UserPresence>(presenceQueryKeys.session(this.userId), (previous) => {
+      const current = previous ?? { onlineUserIds: [], ready: false };
+      if (event.type === "presence.snapshot") {
+        if (current.ready) throw new Error("Presença já sincronizada.");
+        return { onlineUserIds: [...new Set([...current.onlineUserIds, ...event.data.userIds])], ready: event.data.complete };
+      }
+      if (!current.ready) throw new Error("Presença recebida antes da sincronização.");
+      const onlineUserIds = current.onlineUserIds.filter((id) => id !== event.data.userId);
+      if (event.data.online) onlineUserIds.push(event.data.userId);
+      return { onlineUserIds, ready: true };
+    });
   }
 
   private receiveReadState(state: ChatReadState) {

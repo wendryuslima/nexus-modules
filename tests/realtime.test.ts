@@ -5,6 +5,19 @@ import { refreshSession } from "../src/services/auth/refresh-session";
 import type { TimelineItemDto } from "../src/types/chats/timeline-dto";
 
 const originalFetch = globalThis.fetch;
+
+test("protocolo valida snapshots e mudanças de presença", () => {
+  const snapshot = { version: 1, type: "presence.snapshot", data: { userIds: ["user-1"], complete: true } };
+  const change = { version: 1, type: "presence.changed", data: { userId: "user-1", online: false } };
+  expect(parseRealtimeEvent(JSON.stringify(snapshot))).toEqual(snapshot);
+  expect(parseRealtimeEvent(JSON.stringify(change))).toEqual(change);
+  for (const data of [{ userIds: [1], complete: true }, { userIds: [""], complete: true }, { userIds: [] }, { userIds: "user-1", complete: true }]) {
+    expect(() => parseRealtimeEvent(JSON.stringify({ ...snapshot, data }))).toThrow();
+  }
+  for (const data of [{ userId: "", online: true }, { userId: "user-1", online: "false" }, { online: true }]) {
+    expect(() => parseRealtimeEvent(JSON.stringify({ ...change, data }))).toThrow();
+  }
+});
 afterEach(() => { globalThis.fetch = originalFetch; resumeSession(); });
 
 const item = (sequence: number): TimelineItemDto => ({

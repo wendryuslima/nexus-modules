@@ -27,11 +27,13 @@ import { useRealtimeStatus } from "@/hooks/chats/use-realtime-status";
 
 type ChatTimelineProps = {
   chatId: string;
+  participantId?: string;
   participantName?: string;
 };
 
 const ChatTimeline = ({
   chatId,
+  participantId,
   participantName = "Participante",
 }: ChatTimelineProps) => {
   const [replyTo, setReplyTo] = useState<TimelineItemDto>();
@@ -92,7 +94,7 @@ const ChatTimeline = ({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-      <TimelineHeader participantName={participantName} onSearch={() => setSearchOpened(true)} searchOpen={searchOpen} />
+      <TimelineHeader participantId={participantId} participantName={participantName} onSearch={() => setSearchOpened(true)} searchOpen={searchOpen} />
       {searchOpen && <MessageSearch chatId={chatId} onClose={closeSearch} />}
       {rawAnchor && anchor === undefined && <div className="space-y-2 p-4"><RequestErrorAlert message="A referência da mensagem é inválida." /><Button size="sm" variant="outline" onClick={returnToLatest}>Ir às mais recentes</Button></div>}
       {anchor !== undefined && <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2 text-xs text-muted-foreground">

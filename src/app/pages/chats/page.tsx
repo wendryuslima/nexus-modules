@@ -94,6 +94,7 @@ const ChatsPage = () => {
                 key={chatId}
                 chatId={chatId}
                 participantName={selectedUserEmail ? getUserDisplayName(selectedUserEmail) : undefined}
+                participantId={selectedChat?.relatedUser ?? detail.data?.relatedUser}
               />
             ) : (
               <ChatPlaceholder />

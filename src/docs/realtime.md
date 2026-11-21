@@ -2,6 +2,12 @@
 
 O provider fica na rota autenticada e mantém automaticamente uma conexão por aba. Alternar conversas não cria outro socket. O WebSocket faz parte do funcionamento normal da aplicação, sem flag de ativação no ambiente ou no build.
 
+A presença usa essa mesma conexão. Após `connection.ready`, o servidor envia um ou mais eventos `presence.snapshot` com `data: { userIds: string[], complete: boolean }`. O último lote tem `complete: true`. Depois, `presence.changed` envia `data: { userId: string, online: boolean }` quando a primeira conexão do usuário abre ou a última fecha. Reservas cujo handshake falha não contam como conexões abertas.
+
+O cache de presença do React Query é separado por usuário autenticado. Pessoas, lista de conversas e cabeçalho da conversa exibem `Online` ou `Ausente`. Antes do snapshot completo e durante desconexões, exibem `Verificando presença...`. Reconectar substitui o estado anterior; eventos de sockets antigos são descartados. Perdas abruptas de rede são detectadas pelo heartbeat existente.
+
+O registro de presença fica na memória do gateway da API. Esta implementação considera as conexões da mesma instância; múltiplas réplicas de API exigem compartilhamento desse registro para oferecer presença global.
+
 - `services/auth/get-session.ts`: consulta identidade e validade do acesso.
 - `services/auth/session-lock.ts`: serializa mudanças de credenciais entre abas.
 - `services/auth/session-lifecycle.ts`: protege callbacks de sessões anteriores e descarta dados privados.

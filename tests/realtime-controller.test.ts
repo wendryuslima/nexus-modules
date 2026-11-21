@@ -2,6 +2,8 @@ import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import { InfiniteQueryObserver, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { RealtimeController } from "../src/services/realtime/controller";
 import { chatsQueryKeys } from "../src/hooks/chats/chats-query-keys";
+import { presenceQueryKeys } from "../src/hooks/users/presence-query-keys";
+import type { UserPresence } from "../src/types/users/user-presence";
 import { preserveLiveTimeline, preserveLiveChats, visibleChats, type TimelineViewData as TimelineData, type ChatsViewData } from "../src/lib/realtime-view-data";
 import { mergeTimelinePages } from "../src/lib/merge-timeline-pages";
 import type { ListChatsResponseDto } from "../src/types/chats/list-chats-dto";
@@ -102,6 +104,48 @@ const fixture = (initial?: TimelineData) => {
   return { client, controller, states, documentEvents, observer };
 };
 const initial: TimelineData = { pages: [page([182])], pageParams: [{ pageSize: 50, order: "sequence" }] };
+
+test("presença usa o socket existente, sincroniza lotes e limpa dados ao reconectar", async () => {
+  globalThis.fetch = (async (input) => new URL(String(input)).pathname === "/v1/auth/session" ? auth() : Response.json(page([182]))) as typeof fetch;
+  const { client, controller } = fixture(initial);
+  const presenceKey = presenceQueryKeys.session("user-1");
+  const presence = () => client.getQueryData<UserPresence>(presenceKey);
+  controller.start();
+  await until(() => TestWebSocket.instances.length === 1);
+  const socket = TestWebSocket.instances[0];
+  socket.frame(ready);
+  socket.frame({ version: 1, type: "presence.snapshot", data: { userIds: ["user-1"], complete: false } });
+  expect(presence()?.ready).toBe(false);
+  socket.frame({ version: 1, type: "presence.snapshot", data: { userIds: ["user-2"], complete: true } });
+  expect(presence()).toEqual({ onlineUserIds: ["user-1", "user-2"], ready: true });
+  socket.frame({ version: 1, type: "presence.changed", data: { userId: "user-2", online: false } });
+  expect(presence()?.onlineUserIds).toEqual(["user-1"]);
+  socket.frame({ version: 1, type: "presence.changed", data: { userId: "user-3", online: true } });
+  expect(presence()?.onlineUserIds).toEqual(["user-1", "user-3"]);
+  expect(TestWebSocket.instances).toHaveLength(1);
+  socket.close(1006);
+  await until(() => presence()?.ready === false);
+  expect(presence()?.onlineUserIds).toEqual([]);
+  await until(() => TestWebSocket.instances.length === 2);
+  const replacement = TestWebSocket.instances[1];
+  replacement.frame(ready);
+  replacement.frame({ version: 1, type: "presence.snapshot", data: { userIds: ["user-1"], complete: true } });
+  socket.frame({ version: 1, type: "presence.changed", data: { userId: "user-3", online: true } });
+  expect(presence()?.onlineUserIds).toEqual(["user-1"]);
+  controller.stop();
+  expect(presence()).toEqual({ onlineUserIds: [], ready: false });
+});
+
+test("presença fora de ordem interrompe a conexão sem preservar estado antigo", async () => {
+  globalThis.fetch = (async (input) => new URL(String(input)).pathname === "/v1/auth/session" ? auth() : Response.json(page([182]))) as typeof fetch;
+  const { client, controller, states } = fixture(initial);
+  controller.start();
+  await until(() => TestWebSocket.instances.length === 1);
+  TestWebSocket.instances[0].frame(ready);
+  TestWebSocket.instances[0].frame({ version: 1, type: "presence.changed", data: { userId: "user-2", online: true } });
+  expect(states.at(-1)).toBe("stopped");
+  expect(client.getQueryData<UserPresence>(presenceQueryKeys.session("user-1"))).toEqual({ onlineUserIds: [], ready: false });
+});
 
 test("chat.read antes da carga HTTP preserva leitura e ignora notificação antiga", async () => {
   globalThis.fetch = (async (input) => new URL(String(input)).pathname === "/v1/auth/session" ? auth() : Response.json(page([182]))) as typeof fetch;

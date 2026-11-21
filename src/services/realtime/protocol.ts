@@ -1,10 +1,11 @@
 import type { ChatReadState } from "@/types/chats/chat-read-state";
 import type { MessageDto } from "@/types/chats/message-dto";
+import type { PresenceSnapshotEvent, PresenceChangedEvent } from "@/types/users/user-presence";
 
 type ReadyEvent = { version: 1; type: "connection.ready"; data: { connectionId: string; userId: string; accessExpiresAt: string } };
 type MessageCreatedEvent = { version: 1; type: "message.created"; eventId: string; occurredAt: string; data: Omit<MessageDto, "deliveryStatus" | "clientMessageId"> & { clientMessageId?: string; chatState?: ChatReadState } };
 type ChatReadEvent = { version: 1; type: "chat.read"; data: ChatReadState };
-type RealtimeEvent = ReadyEvent | MessageCreatedEvent | ChatReadEvent;
+type RealtimeEvent = ReadyEvent | MessageCreatedEvent | ChatReadEvent | PresenceSnapshotEvent | PresenceChangedEvent;
 
 class IncompatibleProtocolError extends Error {}
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -36,9 +37,17 @@ const parseRealtimeEvent = (raw: string): RealtimeEvent | null => {
   const event: unknown = JSON.parse(raw);
   if (!record(event)) throw new Error("Evento inválido.");
   if (event.version !== 1) throw new IncompatibleProtocolError("Atualize a aplicação para continuar recebendo mensagens em tempo real.");
-  if (event.type !== "connection.ready" && event.type !== "message.created" && event.type !== "chat.read") return null;
+  if (event.type !== "connection.ready" && event.type !== "message.created" && event.type !== "chat.read" && event.type !== "presence.snapshot" && event.type !== "presence.changed") return null;
   if (!record(event.data)) throw new Error("Dados do evento inválidos.");
   const data = event.data;
+  if (event.type === "presence.snapshot") {
+    if (!Array.isArray(data.userIds) || !data.userIds.every(text) || typeof data.complete !== "boolean") throw new Error("Presença inválida.");
+    return event as PresenceSnapshotEvent;
+  }
+  if (event.type === "presence.changed") {
+    if (!text(data.userId) || typeof data.online !== "boolean") throw new Error("Presença inválida.");
+    return event as PresenceChangedEvent;
+  }
   if (event.type === "chat.read") {
     if (!validChatState(data)) throw new Error("Contagem de mensagens inválida.");
     return event as ChatReadEvent;

@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserPresence } from "@/app/components/people/user-presence";
 import { Button } from "@/components/ui/button";
 import { getNameInitials } from "@/lib/get-name-initials";
 import { getUserDisplayName } from "@/lib/get-user-display-name";
@@ -45,14 +46,8 @@ const PersonListItem = ({
             >
               {getNameInitials(name)}
             </AvatarFallback>
+            <UserPresence userId={user.user_id} badge className={cn("size-2", isActive && "ring-primary")} />
           </Avatar>
-          <span
-            aria-label="Disponível"
-            className={cn(
-              "absolute right-0 bottom-0 size-2 rounded-full border border-card bg-primary",
-              isActive && "border-primary",
-            )}
-          />
         </div>
 
         <span className="min-w-0 flex-1">
@@ -65,6 +60,7 @@ const PersonListItem = ({
           >
             {user.email}
           </span>
+          <UserPresence userId={user.user_id} className={cn(isActive && "text-primary-foreground/75")} />
         </span>
       </Button>
     </li>

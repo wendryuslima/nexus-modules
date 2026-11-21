@@ -1,6 +1,5 @@
 import {
   CircleAlert,
-  CircleDot,
   MessageCircle,
   Star,
   UsersRound,
@@ -12,6 +11,7 @@ import RequestErrorAlert from "@/app/components/auth/request-error-alert";
 import { AppShell } from "@/app/components/layout/app-shell";
 import { PeopleListSkeleton } from "@/app/components/people/people-list-skeleton";
 import { PersonListItem } from "@/app/components/people/person-list-item";
+import { UserPresence } from "@/app/components/people/user-presence";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -130,10 +130,7 @@ const PeoplePage = () => {
               {selectedUserName ? (
                 <div className="min-w-0">
                   <h2 className="truncate font-heading text-lg font-semibold">{selectedUserName}</h2>
-                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <CircleDot aria-hidden="true" className="size-3 text-primary" />
-                    Disponível para conversar
-                  </p>
+                  <UserPresence userId={selectedUserId ?? undefined} />
                 </div>
               ) : (
                 <div>

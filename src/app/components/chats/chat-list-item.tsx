@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserPresence } from "@/app/components/people/user-presence";
 import { Button } from "@/components/ui/button";
 import { formatChatDate } from "@/lib/format-chat-date";
 import { getNameInitials } from "@/lib/get-name-initials";
@@ -32,6 +33,7 @@ const ChatListItem = ({ chat, name, isActive }: ChatListItemProps) => {
         <AvatarFallback className="bg-primary/15 text-xs font-semibold text-foreground">
           {getNameInitials(name)}
         </AvatarFallback>
+        <UserPresence userId={chat.relatedUser} badge />
       </Avatar>
       <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
       <span className="flex shrink-0 flex-col items-end gap-1">

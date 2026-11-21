@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { ChatListItem } from "../src/app/components/chats/chat-list-item";
@@ -76,9 +76,11 @@ test("marcação envia apenas a sequência carregada e permite cancelar na naveg
 });
 
 test("badge oculta zero, mostra quantidade e limita visualmente a 99+", () => {
-  const render = (count: number) => renderToStaticMarkup(<MemoryRouter><ChatListItem chat={{ ...list().pages[0].data[0], unreadCount: count }} name="Pablo" isActive={false} /></MemoryRouter>);
+  const client = new QueryClient();
+  const render = (count: number) => renderToStaticMarkup(<QueryClientProvider client={client}><MemoryRouter><ChatListItem chat={{ ...list().pages[0].data[0], unreadCount: count }} name="Pablo" isActive={false} /></MemoryRouter></QueryClientProvider>);
   expect(render(0)).not.toContain("mensagens não lidas");
   expect(render(2)).toContain('aria-label="2 mensagens não lidas"');
   expect(render(120)).toContain("99+");
   expect(render(120)).toContain('aria-label="120 mensagens não lidas"');
+  client.clear();
 });
